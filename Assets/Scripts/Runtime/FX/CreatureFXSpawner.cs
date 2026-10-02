@@ -41,9 +41,10 @@ namespace Dab.Runtime.FX
     /// --------------------------------
     /// palette.json critical-pairs C7 and the art-bible greyscale gate both
     /// require effects to survive desaturation. Each burst type therefore
-    /// carries shape and motion as well as hue: hearts rise and wobble, stars
-    /// radiate on a fixed 12-spoke pattern, and splatters fall and fade. A child
-    /// who cannot separate the hues still sees all three.
+    /// carries shape and motion as well as hue: hearts rise and wobble, the
+    /// success flourish blooms on a fixed 12-spoke radial, and ink absorbs into
+    /// the surface as a soft blot. A child who cannot separate the hues still
+    /// sees all three.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CreatureFXSpawner : MonoBehaviour
@@ -57,14 +58,18 @@ namespace Dab.Runtime.FX
         /// </summary>
         public enum BurstKind
         {
-            /// <summary>Paint flicked off the surface. Fires while painting.</summary>
-            PaintSplatter = 0,
+            /// <summary>Wet paint absorbing into the surface. Fires while painting.</summary>
+            InkSpread = 0,
 
             /// <summary>Affection. Fires when the child pets the creature.</summary>
             FloatingHeart = 1,
 
-            /// <summary>Celebration. Fires on an ability unlock flourish.</summary>
-            SparkleStar = 2
+            /// <summary>
+            /// Success, on an ability unlock flourish. palette.json MinigameSuccess
+            /// fixes this as a 12-spoke radial that inherits the child's paint hue;
+            /// it must never carry a fixed colour of its own.
+            /// </summary>
+            SuccessFlourish = 2
         }
 
         #endregion
@@ -95,36 +100,56 @@ namespace Dab.Runtime.FX
         private int _poolSizePerKind = 6;
 
         [Header("Burst Counts")]
-        [SerializeField, Range(1, 12)] private int _splatterCount = 4;
+        [SerializeField, Range(1, 12)] private int _inkCount = 4;
         [SerializeField, Range(1, 12)] private int _heartCount = 3;
-        [SerializeField, Range(1, 16)] private int _starCount = 8;
+
+        // No count for SuccessFlourish: the burst is one growing 12-spoke
+        // radial sprite, so emitting a fixed single particle is palette.json
+        // C7 rather than a configurable knob.
 
         [Header("Throttling")]
-        [Tooltip("Minimum seconds between splatters during a continuous stroke. " +
+        [Tooltip("Minimum seconds between ink bursts during a continuous stroke. " +
                  "A fast drag emits many strokes per second and an unthrottled " +
                  "response would look like a firehose, not feedback.")]
         [SerializeField, Range(0.02f, 0.5f)]
-        private float _splatterInterval = 0.08f;
+        private float _inkInterval = 0.08f;
 
         [Tooltip("Minimum seconds between heart bursts while petting.")]
         [SerializeField, Range(0.1f, 1.5f)]
         private float _heartInterval = 0.45f;
 
-        [Tooltip("Minimum seconds between star bursts. The flourish is the single " +
-                 "most important moment in the 5-minute loop, so it is not throttled " +
-                 "tightly and may repeat freely.")]
+        [Tooltip("Minimum seconds between success flourishes. The flourish is the " +
+                 "single most important moment in the 5-minute loop, so it is not " +
+                 "throttled tightly and may repeat freely.")]
         [SerializeField, Range(0.1f, 2f)]
-        private float _starInterval = 0.6f;
+        private float _successInterval = 0.6f;
 
-        [Header("Colours (from design/Art/palette.json tier-0 paint palette)")]
-        [SerializeField] private Color _splatterColor = new Color(1f, 0.408f, 0.408f, 1f);
-        [SerializeField] private Color _heartColor = new Color(1f, 0.690f, 0.816f, 1f);
-        [SerializeField] private Color _starColor = new Color(1f, 0.918f, 0.722f, 1f);
+        [Header("Colours (from design/Art/palette.json)")]
+        [Tooltip("Heart tint. Fixed at the Attention semantic #FFE3B8. The heart is " +
+                 "the child's own affect rendered outward, so it never inherits the " +
+                 "paint hue.")]
+        [SerializeField] private Color _heartColor = new Color(1f, 0.890196f, 0.721569f, 1f);
+
+        [Header("Inherited Paint Hue")]
+        [Tooltip("Hue applied to ink blooms and the success radial. palette.json " +
+                 "MinigameSuccess requires the success radial to inherit the child's " +
+                 "paint hue and carry no fixed colour of its own, and wet paint is " +
+                 "the child's paint too. White until a paint-selection system exists " +
+                 "to call SetInheritedPaintHue.")]
+        [SerializeField] private Color _paintHue = Color.white;
+
+        [Header("Textures")]
+        [Tooltip("Optional overrides for the generated FX sprites. When left empty " +
+                 "the spawner falls back to Resources.Load under FX/ (generated by " +
+                 "Tools > Dab > Art > Generate FX Textures).")]
+        [SerializeField] private Texture2D _inkTexture;
+        [SerializeField] private Texture2D _heartTexture;
+        [SerializeField] private Texture2D _successTexture;
 
         [Header("Lifetime")]
-        [SerializeField, Range(0.2f, 2f)] private float _splatterLifetime = 0.45f;
+        [SerializeField, Range(0.2f, 2f)] private float _inkLifetime = 0.45f;
         [SerializeField, Range(0.3f, 2.5f)] private float _heartLifetime = 1.1f;
-        [SerializeField, Range(0.3f, 3f)] private float _starLifetime = 0.9f;
+        [SerializeField, Range(0.3f, 3f)] private float _successLifetime = 0.9f;
 
         #endregion
 
@@ -133,29 +158,30 @@ namespace Dab.Runtime.FX
         private const int KindCount = 3;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
 
         // Fixed-size pools, one flat array per kind. Flat rather than jagged so the
         // whole set is three contiguous allocations made once, and so the cursor
         // maths is a modulo rather than a double indirection.
-        private readonly ParticleSystem[] _splatterPool = new ParticleSystem[16];
+        private readonly ParticleSystem[] _inkPool = new ParticleSystem[16];
         private readonly ParticleSystem[] _heartPool = new ParticleSystem[16];
-        private readonly ParticleSystem[] _starPool = new ParticleSystem[16];
+        private readonly ParticleSystem[] _successPool = new ParticleSystem[16];
 
-        private int _splatterCursor;
+        private int _inkCursor;
         private int _heartCursor;
-        private int _starCursor;
+        private int _successCursor;
 
         private Transform _poolRoot;
-        private Material _splatterMaterial;
+        private Material _inkMaterial;
         private Material _heartMaterial;
-        private Material _starMaterial;
+        private Material _successMaterial;
 
         // Unscaled time accumulators. Time.unscaledTime, not Time.time, so a
         // paused game still settles its effects rather than freezing a burst
         // mid-air, which reads as a bug.
-        private float _lastSplatterTime = -99f;
+        private float _lastInkTime = -99f;
         private float _lastHeartTime = -99f;
-        private float _lastStarTime = -99f;
+        private float _lastSuccessTime = -99f;
 
         private Camera _camera;
         private bool _subscribed;
@@ -185,6 +211,41 @@ namespace Dab.Runtime.FX
         /// itself rather than throwing every frame.
         /// </summary>
         public bool IsReady => _poolBuilt;
+
+        /// <summary>
+        /// Current hue inherited by the paint-tinted bursts (ink and the success
+        /// radial). White until a paint-selection system calls
+        /// <see cref="SetInheritedPaintHue"/>.
+        /// </summary>
+        public Color InheritedPaintHue => _paintHue;
+
+        /// <summary>
+        /// Sets the hue the ink and success bursts inherit from the child's
+        /// current paint. This is not a decoration knob: palette.json
+        /// MinigameSuccess requires the success radial to take its colour from
+        /// the paint the child chose, and reading that hue is the future paint
+        /// system's job. The value is cached so repeated identical sets are free,
+        /// and materials are only touched when the hue actually changes.
+        /// </summary>
+        public void SetInheritedPaintHue(Color hue)
+        {
+            if (hue == _paintHue)
+            {
+                return;
+            }
+
+            _paintHue = hue;
+
+            if (_inkMaterial != null)
+            {
+                _inkMaterial.SetColor(BaseColorId, hue);
+            }
+
+            if (_successMaterial != null)
+            {
+                _successMaterial.SetColor(BaseColorId, hue);
+            }
+        }
 
         /// <summary>
         /// Emits a burst of a given kind at a world position and direction.
@@ -217,14 +278,14 @@ namespace Dab.Runtime.FX
 
             switch (kind)
             {
-                case BurstKind.PaintSplatter:
-                    emitted = EmitSplatter(position, normal, emit);
+                case BurstKind.InkSpread:
+                    emitted = EmitInk(position, normal, emit);
                     break;
                 case BurstKind.FloatingHeart:
                     emitted = EmitHeart(position, normal, emit);
                     break;
-                case BurstKind.SparkleStar:
-                    emitted = EmitStar(position, normal, emit);
+                case BurstKind.SuccessFlourish:
+                    emitted = EmitSuccess(position, normal, emit);
                     break;
             }
 
@@ -263,20 +324,20 @@ namespace Dab.Runtime.FX
         {
             Unsubscribe();
 
-            for (var i = 0; i < _splatterPool.Length; i++)
+            for (var i = 0; i < _inkPool.Length; i++)
             {
-                _splatterPool[i] = null;
+                _inkPool[i] = null;
                 _heartPool[i] = null;
-                _starPool[i] = null;
+                _successPool[i] = null;
             }
 
-            DestroyRuntimeObject(_splatterMaterial);
+            DestroyRuntimeObject(_inkMaterial);
             DestroyRuntimeObject(_heartMaterial);
-            DestroyRuntimeObject(_starMaterial);
+            DestroyRuntimeObject(_successMaterial);
 
-            _splatterMaterial = null;
+            _inkMaterial = null;
             _heartMaterial = null;
-            _starMaterial = null;
+            _successMaterial = null;
 
             if (_poolRoot != null)
             {
@@ -321,7 +382,7 @@ namespace Dab.Runtime.FX
             if (_machine != null && _machine.CurrentStateId == CreatureStateId.Painting)
             {
                 TryTrackTouch();
-                TryEmitThrottled(BurstKind.PaintSplatter, _splatterInterval, ref _lastSplatterTime);
+                TryEmitThrottled(BurstKind.InkSpread, _inkInterval, ref _lastInkTime);
             }
         }
 
@@ -353,24 +414,34 @@ namespace Dab.Runtime.FX
             // draw calls instead of one per pooled emitter, and it means the
             // colour is uniform state set once rather than per-emission state
             // set repeatedly.
-            var splatterMat = CreateMaterial(shader, _splatterColor);
+            //
+            // Ink and the success radial share the inherited paint hue; the
+            // heart is the fixed Attention colour. Materials are created with the
+            // current _paintHue, so a SetInheritedPaintHue call before Awake
+            // still colours them here.
+            var inkMat = CreateMaterial(shader, _paintHue);
             var heartMat = CreateMaterial(shader, _heartColor);
-            var starMat = CreateMaterial(shader, _starColor);
+            var successMat = CreateMaterial(shader, _paintHue);
+
+            AssignTexture(inkMat, LoadTexture("InkBloom", _inkTexture));
+            AssignTexture(heartMat, LoadTexture("FloatingHeart", _heartTexture));
+            AssignTexture(successMat, LoadTexture("SuccessRadial", _successTexture));
 
             // Held so OnDestroy can release them. A Material created here is not
             // a child of anything, so destroying the creature does not take it
             // with it, and HideFlags.HideAndDontSave keeps it out of a save
             // rather than out of memory. Every scene reload or playtest restart
             // would otherwise leave three more orphaned materials behind.
-            _splatterMaterial = splatterMat;
+            _inkMaterial = inkMat;
             _heartMaterial = heartMat;
-            _starMaterial = starMat;
+            _successMaterial = successMat;
 
-            for (var i = 0; i < _poolSizePerKind && i < _splatterPool.Length; i++)
+            for (var i = 0; i < _poolSizePerKind && i < _inkPool.Length; i++)
             {
-                _splatterPool[i] = CreateEmitter("Splatter", splatterMat, _splatterLifetime, 0.045f);
+                _inkPool[i] = CreateEmitter("Ink", inkMat, _inkLifetime, 0.05f);
                 _heartPool[i] = CreateEmitter("Heart", heartMat, _heartLifetime, 0.075f);
-                _starPool[i] = CreateEmitter("Star", starMat, _starLifetime, 0.055f);
+                _successPool[i] = CreateEmitter(
+                    "Success", successMat, _successLifetime, 0.05f, grow: true);
             }
 
             _poolBuilt = true;
@@ -385,8 +456,44 @@ namespace Dab.Runtime.FX
             return material;
         }
 
+        /// <summary>
+        /// Binds a generated sprite to a material, preferring the explicitly
+        /// assigned editor override and falling back to the asset generated under
+        /// Resources/FX by Tools > Dab > Art > Generate FX Textures. A missing
+        /// texture degrades to the shader default quad — noisy at worst, never an
+        /// error that breaks gameplay.
+        /// </summary>
+        private static void AssignTexture(Material material, Texture2D texture)
+        {
+            if (material == null || texture == null || !material.HasProperty(BaseMapId))
+            {
+                return;
+            }
+
+            material.SetTexture(BaseMapId, texture);
+        }
+
+        private static Texture2D LoadTexture(string resourceName, Texture2D overrideTexture)
+        {
+            if (overrideTexture != null)
+            {
+                return overrideTexture;
+            }
+
+            var loaded = Resources.Load<Texture2D>("FX/" + resourceName);
+            if (loaded == null)
+            {
+                Debug.LogWarning(
+                    "[CreatureFXSpawner] Texture 'FX/" + resourceName + "' not found; " +
+                    "run Tools > Dab > Art > Generate FX Textures. Falling back to the " +
+                    "shader default.");
+            }
+
+            return loaded;
+        }
+
         private ParticleSystem CreateEmitter(
-            string name, Material material, float lifetime, float size)
+            string name, Material material, float lifetime, float size, bool grow = false)
         {
             var go = new GameObject("Pool_" + name);
             go.hideFlags = HideFlags.HideAndDontSave;
@@ -408,6 +515,19 @@ namespace Dab.Runtime.FX
             main.startSize = size;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = 24;
+
+            // The success radial blooms: a single particle that grows from a dot
+            // to a full wheel over its lifetime, which is what carries the
+            // 12-spoke pattern without a wall of overlapping particles.
+            if (grow)
+            {
+                var sizeOverLifetime = ps.sizeOverLifetime;
+                sizeOverLifetime.enabled = true;
+                sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(
+                    1f, new AnimationCurve(
+                        new Keyframe(0f, 0.05f),
+                        new Keyframe(1f, 1.6f)));
+            }
 
             // Emission rate is zero on purpose: particles are added only through
             // Emit, so a pooled emitter never accumulates background particles
@@ -498,10 +618,10 @@ namespace Dab.Runtime.FX
                     // (game-concept.md step 3, "Echo"). It gets the largest burst
                     // and the least throttling, because this is the moment the loop
                     // exists to deliver.
-                    if (Time.unscaledTime - _lastStarTime >= _starInterval)
+                    if (Time.unscaledTime - _lastSuccessTime >= _successInterval)
                     {
-                        _lastStarTime = Time.unscaledTime;
-                        Emit(BurstKind.SparkleStar, _lastPoint, _lastNormal);
+                        _lastSuccessTime = Time.unscaledTime;
+                        Emit(BurstKind.SuccessFlourish, _lastPoint, _lastNormal);
                     }
 
                     break;
@@ -556,10 +676,10 @@ namespace Dab.Runtime.FX
 
         #region Emission
 
-        private bool EmitSplatter(
+        private bool EmitInk(
             Vector3 position, Vector3 normal, ParticleSystem.EmitParams emit)
         {
-            var ps = NextSlot(_splatterPool, ref _splatterCursor);
+            var ps = NextSlot(_inkPool, ref _inkCursor);
             if (ps == null)
             {
                 return false;
@@ -567,13 +687,15 @@ namespace Dab.Runtime.FX
 
             var direction = normal.sqrMagnitude > 1e-6f ? normal : Vector3.up;
 
-            // Thrown back along the surface normal and fanned sideways, so it
-            // reads as wet paint flicking off rather than as an explosion.
+            // Wet paint absorbs: a slow, short-lived drift that stays where the
+            // stroke was, reading as the surface soaking in paint rather than
+            // paint flicking off. art-bible explicitly bans dripping, runs, and
+            // splatter, so a soft settling blot is the on-spec behaviour.
             // UnityEngine.Random is qualified explicitly: this file has
             // `using System;` for Action, which makes the bare name ambiguous.
-            emit.velocity = (direction + UnityEngine.Random.insideUnitSphere * 0.55f) * 0.9f;
-            emit.startLifetime = _splatterLifetime;
-            ps.Emit(emit, _splatterCount);
+            emit.velocity = direction * 0.45f + UnityEngine.Random.insideUnitSphere * 0.25f;
+            emit.startLifetime = _inkLifetime;
+            ps.Emit(emit, _inkCount);
             return true;
         }
 
@@ -600,35 +722,25 @@ namespace Dab.Runtime.FX
             return true;
         }
 
-        private bool EmitStar(
+        private bool EmitSuccess(
             Vector3 position, Vector3 normal, ParticleSystem.EmitParams emit)
         {
-            var ps = NextSlot(_starPool, ref _starCursor);
+            var ps = NextSlot(_successPool, ref _successCursor);
             if (ps == null)
             {
                 return false;
             }
 
-            // palette.json C7 specifies a fixed 12-spoke radial for a success
-            // burst, and calls the pattern itself the carrier. Emitting on a
-            // fixed angular step rather than a random cone is therefore a
-            // requirement, not a stylistic choice: a random scatter would lose the
-            // pattern that makes the burst readable without colour.
-            var spokes = 12;
-            var step = 2f * Mathf.PI / spokes;
-
-            for (var i = 0; i < _starCount; i++)
-            {
-                // Evenly distributed around the ring so the count can differ from
-                // the spoke count without breaking the pattern.
-                var angle = step * (i * spokes / _starCount % spokes);
-                var dir = new Vector3(Mathf.Cos(angle), 0.35f, Mathf.Sin(angle));
-
-                emit.velocity = dir * 1.15f;
-                emit.startLifetime = _starLifetime;
-                ps.Emit(emit, 1);
-            }
-
+            // palette.json MinigameSuccess/C7 specifies a fixed 12-spoke radial
+            // for a success burst and calls the pattern itself the carrier. The
+            // pattern lives in the generated sprite and in the growth the
+            // emitter's sizeOverLifetime curve applies, so one particle per burst
+            // is the correct, spec-compliant emission: a single 12-spoke sprite
+            // that blooms instead of a cloud of scatter. It carries no fixed
+            // colour here — the material inherits the child's paint hue.
+            emit.velocity = Vector3.zero;
+            emit.startLifetime = _successLifetime;
+            ps.Emit(emit, 1);
             return true;
         }
 
@@ -650,11 +762,6 @@ namespace Dab.Runtime.FX
                 return null;
             }
 
-            // Bound the scan to the populated prefix, not pool.Length. The arrays
-            // are fixed at MaxPoolSizePerKind so they are never resized, but only
-            // _poolSizePerKind entries are built, so cycling on Length would walk
-            // into nulls and silently drop every burst after the first few until
-            // the cursor wrapped back to zero.
             // Bound the scan to the populated prefix, not pool.Length. The arrays
             // are fixed at MaxPoolSizePerKind so they are never resized, but only
             // _poolSizePerKind entries are built, so cycling on Length would walk

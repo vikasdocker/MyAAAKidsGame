@@ -202,9 +202,9 @@ namespace Dab.Tests.VisualBridge
             // Every kind, at a position with no collider under it. A burst must
             // still emit: the pool is positioned explicitly, so a miss against
             // the world must not be treated as a reason to drop the effect.
-            spawner.Emit(CreatureFXSpawner.BurstKind.PaintSplatter, Vector3.zero, Vector3.up);
+            spawner.Emit(CreatureFXSpawner.BurstKind.InkSpread, Vector3.zero, Vector3.up);
             spawner.Emit(CreatureFXSpawner.BurstKind.FloatingHeart, Vector3.one, Vector3.up);
-            spawner.Emit(CreatureFXSpawner.BurstKind.SparkleStar, Vector3.up, Vector3.up);
+            spawner.Emit(CreatureFXSpawner.BurstKind.SuccessFlourish, Vector3.up, Vector3.up);
 
             Assert.AreEqual(3, spawner.TotalBursts,
                 "All three burst kinds must emit without a mesh hit.");
@@ -243,7 +243,7 @@ namespace Dab.Tests.VisualBridge
 
             for (var i = 0; i < Bursts; i++)
             {
-                spawner.Emit(CreatureFXSpawner.BurstKind.SparkleStar, Vector3.zero, Vector3.up);
+                spawner.Emit(CreatureFXSpawner.BurstKind.SuccessFlourish, Vector3.zero, Vector3.up);
                 total += recorder.LastValue;
             }
 
@@ -270,7 +270,7 @@ namespace Dab.Tests.VisualBridge
 
             for (var i = 0; i < 500; i++)
             {
-                spawner.Emit(CreatureFXSpawner.BurstKind.PaintSplatter, Vector3.zero, Vector3.up);
+                spawner.Emit(CreatureFXSpawner.BurstKind.InkSpread, Vector3.zero, Vector3.up);
             }
 
             yield return null;
@@ -286,7 +286,7 @@ namespace Dab.Tests.VisualBridge
             // they are never resized, but only _poolSizePerKind entries are
             // actually built. Cycling on the array length therefore walked into
             // nulls and silently dropped a burst for every slot past the last
-            // built one, which showed up as "the first few splatters work, then
+            // built one, which showed up as "the first few ink bursts work, then
             // the effect stops" rather than as an error.
             //
             // Emitting well past the pool size and checking every burst was
@@ -303,7 +303,7 @@ namespace Dab.Tests.VisualBridge
 
             for (var i = 0; i < Bursts; i++)
             {
-                spawner.Emit(CreatureFXSpawner.BurstKind.PaintSplatter, Vector3.zero, Vector3.up);
+                spawner.Emit(CreatureFXSpawner.BurstKind.InkSpread, Vector3.zero, Vector3.up);
             }
 
             Assert.AreEqual(Bursts, spawner.TotalBursts,
