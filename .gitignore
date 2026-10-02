@@ -40,6 +40,11 @@ crashlytics-build.properties
 *.apk.idsig
 *.aab.idsig
 
+# Test runner output. -runTests without an explicit -testResults drops an
+# XML report in the project root, which then shows up as an untracked file for
+# anyone who runs the suite locally.
+TestResults*.xml
+
 # Python (Tools/ verification gate)
 __pycache__/
 *.py[cod]

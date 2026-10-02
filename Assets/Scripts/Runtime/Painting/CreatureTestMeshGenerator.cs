@@ -404,6 +404,57 @@ namespace Dab.Runtime.Painting
         /// </summary>
         public bool TryScreenToUv(Vector2 screenPosition, Camera camera, out Vector2 uv)
         {
+            // Delegates rather than re-implementing. The raycast, the degenerate
+            // direction guard and the collider-ownership filter are all shared
+            // with TryScreenToSurface, so the filter that stops the harness
+            // painting a UV belonging to some other object in the scene is
+            // written down exactly once.
+            if (!TryScreenToSurface(screenPosition, camera, out _, out _, out var surfaceUv))
+            {
+                uv = Vector2.zero;
+                return false;
+            }
+
+            uv = surfaceUv;
+            return true;
+        }
+
+        /// <summary>Overload using the configured or main camera.</summary>
+        public bool TryScreenToUv(Vector2 screenPosition, out Vector2 uv)
+        {
+            return TryScreenToUv(screenPosition, null, out uv);
+        }
+
+        /// <summary>
+        /// Resolves a screen position to a point on this mesh in world space,
+        /// alongside the surface normal and the UV.
+        ///
+        /// Added for <c>CreatureFXSpawner</c>, which needs a world position to
+        /// emit particles at and a normal to orient them along. The UV overload
+        /// cannot serve that: a particle emitter is given world coordinates, and
+        /// converting a UV back to a world point is not generally possible
+        /// because a UV island is a flattened chart with no unique inverse.
+        ///
+        /// Shares one raycast implementation with <see cref="TryScreenToUv"/>
+        /// deliberately. The collider-ownership filter below is the part that is
+        /// easy to get subtly wrong: a second implementation would have to
+        /// re-derive it, and a version that forgot would let the creature emit
+        /// hearts from a background pebble it had just been touched by.
+        ///
+        /// <paramref name="normal"/> is the mesh normal at the hit, not a
+        /// smoothed vertex normal, because the raycast cannot recover the
+        /// interpolated normal without extra work that a particle emitter does
+        /// not need. Good enough to orient a burst away from the surface.
+        /// </summary>
+        public bool TryScreenToSurface(
+            Vector2 screenPosition,
+            Camera camera,
+            out Vector3 point,
+            out Vector3 normal,
+            out Vector2 uv)
+        {
+            point = Vector3.zero;
+            normal = Vector3.zero;
             uv = Vector2.zero;
 
             if (_meshCollider == null && !TryEnsureMeshCollider())
@@ -414,9 +465,13 @@ namespace Dab.Runtime.Painting
             var cam = camera != null ? camera : (_uvCamera != null ? _uvCamera : Camera.main);
             if (cam == null)
             {
+                // Warned here rather than in the UV overload, because both
+                // overloads now route through this method and a missing camera
+                // is the same authoring mistake either way.
                 Debug.LogWarning(
-                    $"[{nameof(CreatureTestMeshGenerator)}] TryScreenToUv needs a " +
-                    "camera. Assign one, or leave it null and add a MainCamera tag.", this);
+                    $"[{nameof(CreatureTestMeshGenerator)}] Screen-to-surface lookup " +
+                    "needs a camera. Assign one, or leave it null and add a " +
+                    "MainCamera tag.", this);
                 return false;
             }
 
@@ -434,22 +489,26 @@ namespace Dab.Runtime.Painting
                 return false;
             }
 
-            // Ignore hits on other colliders in the scene so the harness does
-            // not paint a UV belonging to something else.
             if (!hit.collider.transform.IsChildOf(transform) &&
                 hit.collider.transform != transform)
             {
                 return false;
             }
 
+            point = hit.point;
+            normal = hit.normal;
             uv = hit.textureCoord;
             return true;
         }
 
         /// <summary>Overload using the configured or main camera.</summary>
-        public bool TryScreenToUv(Vector2 screenPosition, out Vector2 uv)
+        public bool TryScreenToSurface(
+            Vector2 screenPosition,
+            out Vector3 point,
+            out Vector3 normal,
+            out Vector2 uv)
         {
-            return TryScreenToUv(screenPosition, null, out uv);
+            return TryScreenToSurface(screenPosition, null, out point, out normal, out uv);
         }
 
         /// <summary>

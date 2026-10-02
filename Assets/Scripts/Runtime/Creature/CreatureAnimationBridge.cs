@@ -1,0 +1,523 @@
+using System;
+using UnityEngine;
+using UnityEngine.Animations;
+
+namespace Dab.Runtime.Creature
+{
+    /// <summary>
+    /// Translates <see cref="CreatureStateId"/> into Animator layer weights and
+    /// parameters, damping every value so state changes never snap.
+    ///
+    /// Why a bridge exists at all
+    /// -------------------------
+    /// The state machine and the Animator are two independent authorities. The
+    /// machine owns *when* a state changes and why; the Animator owns *how* it
+    /// looks. Neither should know about the other's vocabulary. This component is
+    /// the only place that translates between them, which means an Animator
+    /// parameter can be renamed without touching gameplay logic, and a gameplay
+    /// state can be split across several animation layers without the machine
+    /// learning anything about animation.
+    ///
+    /// Why the damping is not optional
+    /// ------------------------------
+    /// art-bible 2.1 hard law 6 requires every state change to animate over at
+    /// least 0.4 s, and explicitly forbids lighting pops. Setting a layer weight
+    /// directly on a transition produces exactly the pop the bible prohibits, so
+    /// every weight here moves through a critically damped approach instead of
+    /// being assigned. The art bible is the reason this component is more than a
+    /// lookup table.
+    ///
+    /// The art bible also independently requires that a state change be legible
+    /// without colour (1.6, three-channel redundancy: shape, motion, audio). A
+    /// damped cross-fade is the *motion* channel of that redundancy, so the
+    /// smoothing here is load-bearing for accessibility rather than polish.
+    ///
+    /// No Animator is wired yet
+    /// -----------------------
+    /// <c>Assets/Animation/Creature/</c> is empty, so at the time of writing
+    /// there is no controller, no layers, and no parameters. Rather than assume
+    /// an authored controller and crash or silently no-op, every write is gated
+    /// on the layer and parameter actually existing, discovered once in Awake.
+    /// This component is therefore safe to attach today: it tracks state, keeps
+    /// its weights correct, and starts driving the Animator the moment a
+    /// controller with the expected layers is assigned. Dropping a controller in
+    /// later requires no code change here.
+    /// </summary>
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(CreatureStateMachine))]
+    public sealed class CreatureAnimationBridge : MonoBehaviour
+    {
+        #region Configuration
+
+        [Header("Layer Names")]
+        [Tooltip("Animator layer for the resting baseline. Expected layer index 0. " +
+                 "If absent, weights are tracked internally but not applied.")]
+        [SerializeField]
+        private string _idleLayerName = "Idle";
+
+        [SerializeField] private string _paintingLayerName = "Painting";
+        [SerializeField] private string _pettingLayerName = "Petting";
+        [SerializeField] private string _feedingLayerName = "Feeding";
+        [SerializeField] private string _abilityLayerName = "AbilityUnlock";
+
+        [Header("Damping")]
+        [Tooltip("Seconds for a layer weight to reach roughly 95% of its target. " +
+                 "The art bible floor for a state change is 0.4 s; below that the " +
+                 "transition reads as a pop, which 2.1 hard law 6 forbids.")]
+        [SerializeField, Range(0.4f, 2f)]
+        private float _weightSmoothTime = 0.55f;
+
+        [Tooltip("Seconds for a trigger to be consumed and reset. Short by design: " +
+                 "triggers are events, and holding one high would read as a stuck pose.")]
+        [SerializeField, Range(0.05f, 0.5f)]
+        private float _triggerHoldSeconds = 0.2f;
+
+        [Header("Diagnostics")]
+        [Tooltip("Log the discovered Animator layout once on Awake. Useful when " +
+                 "authoring a controller, noisy afterwards.")]
+        [SerializeField]
+        private bool _logLayoutOnAwake;
+
+        #endregion
+
+        #region Animator Parameter Names
+
+        // Declared as constants rather than hashed inline so an animator authoring
+        // pass can grep for them. The hashes are computed once in Awake: hashing a
+        // string in the per-frame path would allocate nothing but would still be
+        // work the frame budget should not pay, and a typo would be silent.
+        private const string StateWeightPrefix = "State_";
+        private const string TransitionSpeedParam = "TransitionSpeed";
+
+        #endregion
+
+        #region Internal State
+
+        private CreatureStateMachine _machine;
+        private Animator _animator;
+
+        // Weights are tracked here unconditionally, whether or not an Animator
+        // exists, so behaviour is observable and testable with no controller
+        // assigned. Applied to the Animator only when the target layer exists.
+        private readonly float[] _weights = new float[CreatureStateMachine.StateCount];
+        private readonly float[] _weightVelocities = new float[CreatureStateMachine.StateCount];
+        private readonly int[] _layerIndices = new int[CreatureStateMachine.StateCount];
+
+        // Triggers are latches, not per-frame writes. A trigger Animator parameter
+        // is consumed by the state machine graph on the next evaluation, so it
+        // must be set once and cleared once. Firing it every frame would restart
+        // the transition on every frame and lock the Animator in its entry state.
+        private readonly int[] _triggerHashes = new int[CreatureStateMachine.StateCount];
+        private readonly float[] _triggerTimers = new float[CreatureStateMachine.StateCount];
+        private readonly bool[] _triggerFired = new bool[CreatureStateMachine.StateCount];
+
+        private int _transitionSpeedHash;
+        private int[] _stateWeightHashes;
+
+        // Which parameters the assigned controller actually declares, resolved
+        // once at Awake. Animator.SetFloat and SetTrigger on a parameter the
+        // controller does not have logs an error, and this path runs every
+        // frame, so an undeclared parameter would flood the log rather than
+        // report once. Reading Animator.parameters allocates a fresh array per
+        // call, which is why this is cached here and never touched again.
+        private readonly bool[] _hasStateWeightParam = new bool[CreatureStateMachine.StateCount];
+        private readonly bool[] _hasTriggerParam = new bool[CreatureStateMachine.StateCount];
+        private bool _hasTransitionSpeedParam;
+
+        private bool _hasAnimator;
+        private bool _subscribed;
+
+        #endregion
+
+        #region Public State
+
+        /// <summary>
+        /// Current damped weight for a state, 0 to 1. Always valid regardless of
+        /// whether an Animator is assigned, which makes it the value tests and
+        /// gameplay should read rather than the Animator.
+        /// </summary>
+        public float GetWeight(CreatureStateId id)
+        {
+            var index = (int)id;
+            return index >= 0 && index < _weights.Length ? _weights[index] : 0f;
+        }
+
+        /// <summary>
+        /// The state currently dominating the blend. Determined by the highest
+        /// weight rather than by the machine's current state, so it lags during a
+        /// cross-fade the same way the visual does. Returns
+        /// <see cref="CreatureStateId.Idle"/> for an out-of-range id.
+        /// </summary>
+        public CreatureStateId DominantState
+        {
+            get
+            {
+                var best = 0;
+                for (var i = 1; i < _weights.Length; i++)
+                {
+                    if (_weights[i] > _weights[best])
+                    {
+                        best = i;
+                    }
+                }
+
+                return (CreatureStateId)best;
+            }
+        }
+
+        /// <summary>
+        /// True when an Animator is assigned and at least one expected layer was
+        /// found. False does not mean the bridge is idle: weights are still being
+        /// computed, only not applied.
+        /// </summary>
+        public bool IsDrivingAnimator => _hasAnimator;
+
+        #endregion
+
+        #region Unity Lifecycle
+
+        private void Awake()
+        {
+            _machine = GetComponent<CreatureStateMachine>();
+            _animator = GetComponent<Animator>();
+
+            // Weights start fully on Idle so the very first frame is a valid pose
+            // rather than a blend from nothing, which would read as a fade-in from
+            // a collapsed mesh.
+            _weights[(int)CreatureStateId.Idle] = 1f;
+
+            BuildHashes();
+            CacheLayerIndices();
+
+            if (_logLayoutOnAwake)
+            {
+                LogLayout();
+            }
+        }
+
+        private void OnEnable()
+        {
+            Subscribe();
+        }
+
+        private void OnDisable()
+        {
+            Unsubscribe();
+        }
+
+        #endregion
+
+        #region Setup
+
+        private void BuildHashes()
+        {
+            _transitionSpeedHash = Animator.StringToHash(TransitionSpeedParam);
+            _stateWeightHashes = new int[CreatureStateMachine.StateCount];
+
+            for (var i = 0; i < _stateWeightHashes.Length; i++)
+            {
+                _stateWeightHashes[i] = Animator.StringToHash(StateWeightPrefix + (CreatureStateId)i);
+
+                // Per-state trigger names, e.g. "Trigger_Painting". Hashing here
+                // means the per-frame path never concatenates a string, which
+                // would allocate on every trigger.
+                _triggerHashes[i] = Animator.StringToHash("Trigger_" + (CreatureStateId)i);
+            }
+        }
+
+        private void CacheLayerIndices()
+        {
+            for (var i = 0; i < _layerIndices.Length; i++)
+            {
+                _layerIndices[i] = -1;
+            }
+
+            if (_animator == null || _animator.runtimeAnimatorController == null)
+            {
+                _hasAnimator = false;
+                return;
+            }
+
+            _layerIndices[(int)CreatureStateId.Idle] = _animator.GetLayerIndex(_idleLayerName);
+            _layerIndices[(int)CreatureStateId.Painting] = _animator.GetLayerIndex(_paintingLayerName);
+            _layerIndices[(int)CreatureStateId.Petting] = _animator.GetLayerIndex(_pettingLayerName);
+            _layerIndices[(int)CreatureStateId.Feeding] = _animator.GetLayerIndex(_feedingLayerName);
+            _layerIndices[(int)CreatureStateId.AbilityUnlock] = _animator.GetLayerIndex(_abilityLayerName);
+
+            // A controller with none of the expected layers is a real authoring
+            // error, but it is not a reason to spam an error every frame. Detected
+            // once here and reported once.
+            _hasAnimator = false;
+            for (var i = 0; i < _layerIndices.Length; i++)
+            {
+                if (_layerIndices[i] >= 0)
+                {
+                    _hasAnimator = true;
+                    break;
+                }
+            }
+
+            CacheParameterPresence();
+
+            if (!_hasAnimator)
+            {
+                Debug.LogWarning(
+                    $"[{nameof(CreatureAnimationBridge)}] An Animator with a controller is " +
+                    "assigned, but none of the expected layers were found " +
+                    $"(Idle='{_idleLayerName}', Painting='{_paintingLayerName}', " +
+                    $"Petting='{_pettingLayerName}', Feeding='{_feedingLayerName}', " +
+                    $"AbilityUnlock='{_abilityLayerName}'). Weights are tracked but not applied.",
+                    this);
+            }
+        }
+
+        /// <summary>
+        /// Records which of the parameters this bridge writes actually exist on
+        /// the assigned controller, so the per-frame path can skip the ones that
+        /// do not. Allocates once, on the Animator.parameters array Unity hands
+        /// back; never called again.
+        /// </summary>
+        private void CacheParameterPresence()
+        {
+            _hasTransitionSpeedParam = false;
+
+            for (var i = 0; i < _hasStateWeightParam.Length; i++)
+            {
+                _hasStateWeightParam[i] = false;
+                _hasTriggerParam[i] = false;
+            }
+
+            if (_animator == null || _animator.runtimeAnimatorController == null)
+            {
+                return;
+            }
+
+            var parameters = _animator.parameters;
+
+            for (var p = 0; p < parameters.Length; p++)
+            {
+                var parameter = parameters[p];
+
+                // Compare nameHash first, then confirm with the name. Relying on
+                // the hash alone would be wrong in principle because two
+                // different parameter names can collide, and a collision would
+                // make the bridge write a parameter it did not mean to. This
+                // runs once, so the string comparison costs nothing that matters.
+                if (parameter.nameHash == _transitionSpeedHash &&
+                    parameter.name == TransitionSpeedParam)
+                {
+                    _hasTransitionSpeedParam = true;
+                    continue;
+                }
+
+                for (var i = 0; i < _hasStateWeightParam.Length; i++)
+                {
+                    if (parameter.nameHash == _stateWeightHashes[i] &&
+                        parameter.name == StateWeightPrefix + (CreatureStateId)i)
+                    {
+                        _hasStateWeightParam[i] = true;
+                    }
+
+                    if (parameter.nameHash == _triggerHashes[i] &&
+                        parameter.name == "Trigger_" + (CreatureStateId)i)
+                    {
+                        _hasTriggerParam[i] = true;
+                    }
+                }
+            }
+        }
+
+        private void LogLayout()
+        {
+            if (_animator == null)
+            {
+                Debug.Log($"[{nameof(CreatureAnimationBridge)}] No Animator on this object.", this);
+                return;
+            }
+
+            if (_animator.runtimeAnimatorController == null)
+            {
+                Debug.Log(
+                    $"[{nameof(CreatureAnimationBridge)}] Animator has no controller assigned. " +
+                    "Bridge will track weights only until one is set.", this);
+                return;
+            }
+
+            var layerCount = _animator.layerCount;
+            var message =
+                $"[{nameof(CreatureAnimationBridge)}] Controller " +
+                $"'{_animator.runtimeAnimatorController.name}' has {layerCount} layer(s):";
+
+            for (var i = 0; i < layerCount; i++)
+            {
+                message += $"\n  [{i}] {_animator.GetLayerName(i)}";
+            }
+
+            Debug.Log(message, this);
+        }
+
+        #endregion
+
+        #region Event Plumbing
+
+        private void Subscribe()
+        {
+            if (_subscribed || _machine == null)
+            {
+                return;
+            }
+
+            // Method group, not a lambda. A lambda captured here has no reference
+            // left to remove it with, which would keep this component alive and
+            // subscribed after this GameObject is destroyed.
+            _machine.StateChanged += HandleStateChanged;
+            _subscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            if (!_subscribed || _machine == null)
+            {
+                return;
+            }
+
+            _machine.StateChanged -= HandleStateChanged;
+            _subscribed = false;
+        }
+
+        private void HandleStateChanged(CreatureStateId from, CreatureStateId to)
+        {
+            // Latch the trigger for the incoming state. Writing the Animator
+            // parameter happens in the next Update, alongside the weight damping,
+            // so a transition that is immediately refused never leaves a trigger
+            // set. The guards are duplicated here and there deliberately: this
+            // method must not write to the Animator from inside the machine's own
+            // transition, which could re-enter the machine.
+            var index = (int)to;
+            if (index < 0 || index >= _triggerTimers.Length)
+            {
+                return;
+            }
+
+            _triggerTimers[index] = _triggerHoldSeconds;
+        }
+
+        #endregion
+
+        #region Per-Frame
+
+        private void Update()
+        {
+            // Unscaled time, deliberately. art-bible 2.1 hard law 6 requires every
+            // state change to animate over at least 0.4 s with no pop. A game
+            // paused by Time.timeScale = 0 has deltaTime of 0, and driving the
+            // blend from that would freeze the creature half way through a
+            // transition and leave it stranded in a blend that never resolves.
+            // Pillar 2 is "nothing can go wrong", and a creature frozen in a
+            // half-finished cross-fade is visibly broken.
+            //
+            // It also means this component is testable: batchmode tests run with
+            // no frame pacing, so a deltaTime-driven blend would never advance.
+            var deltaTime = Time.unscaledDeltaTime;
+
+            if (deltaTime <= 0f)
+            {
+                return;
+            }
+
+            UpdateWeights(deltaTime);
+            ApplyToAnimator(deltaTime);
+        }
+
+        private void UpdateWeights(float deltaTime)
+        {
+            var current = (int)_machine.CurrentStateId;
+
+            for (var i = 0; i < _weights.Length; i++)
+            {
+                // Target is 1 for the current state, 0 otherwise. Cross-fades are
+                // therefore inherently symmetrical: leaving a state and entering
+                // one use the same smoothing, so a transition cannot appear to
+                // arrive faster than it departs.
+                var target = i == current ? 1f : 0f;
+
+                _weights[i] = Mathf.SmoothDamp(
+                    _weights[i], target, ref _weightVelocities[i], _weightSmoothTime,
+                    Mathf.Infinity, deltaTime);
+            }
+        }
+
+        private void ApplyToAnimator(float deltaTime)
+        {
+            if (!_hasAnimator)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _weights.Length; i++)
+            {
+                var layer = _layerIndices[i];
+
+                if (layer >= 0)
+                {
+                    _animator.SetLayerWeight(layer, _weights[i]);
+                }
+
+                if (_hasStateWeightParam[i])
+                {
+                    _animator.SetFloat(_stateWeightHashes[i], _weights[i]);
+                }
+
+                // One-shot latch. Fire exactly once, hold the parameter high long
+                // enough for the Animator to consume it, then clear it. Re-firing
+                // every frame while the timer runs would restart the transition
+                // every frame and pin the layer in its entry state, which is the
+                // opposite of the damping this component exists to provide.
+                //
+                // Gated on the trigger actually being declared. Setting a
+                // trigger the controller does not have logs an error every frame.
+                if (_hasTriggerParam[i])
+                {
+                    if (_triggerFired[i])
+                    {
+                        if (_triggerTimers[i] > 0f)
+                        {
+                            _triggerTimers[i] -= deltaTime;
+
+                            if (_triggerTimers[i] <= 0f)
+                            {
+                                _triggerTimers[i] = 0f;
+                                _animator.ResetTrigger(_triggerHashes[i]);
+                                _triggerFired[i] = false;
+                            }
+                        }
+                    }
+                    else if (_triggerTimers[i] > 0f)
+                    {
+                        _animator.SetTrigger(_triggerHashes[i]);
+                        _triggerFired[i] = true;
+                    }
+                }
+                else
+                {
+                    // No trigger to fire, so do not let the latch sit armed
+                    // waiting for a parameter that will never arrive.
+                    _triggerTimers[i] = 0f;
+                    _triggerFired[i] = false;
+                }
+            }
+
+            // Normalised cross-fade rate, so an Animator can match its own
+            // in-transition speed to the blend actually happening here instead of
+            // fighting it. Derived from the machine so the two cannot disagree.
+            if (_hasTransitionSpeedParam)
+            {
+                _animator.SetFloat(
+                    _transitionSpeedHash,
+                    1f / Mathf.Max(0.01f, _weightSmoothTime));
+            }
+        }
+
+        #endregion
+    }
+}
