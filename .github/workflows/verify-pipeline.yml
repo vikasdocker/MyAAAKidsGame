@@ -1,0 +1,53 @@
+name: Verify Pipeline
+
+# Runs the art-metrics gate on every push. The script recomputes every numeric
+# claim in design/Art/palette.json and design/Art/typography.json from the hex
+# values and exits 1 on any disagreement, so a green run is real evidence rather
+# than a restatement of the file.
+on:
+  push:
+  workflow_dispatch:
+
+# Least privilege: this job only needs to read the repository.
+permissions:
+  contents: read
+
+# A new push supersedes the previous run. Do not spend minutes re-verifying a
+# commit nobody is shipping any more.
+concurrency:
+  group: verify-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-art-metrics:
+    name: Recompute art metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # The script is standard library only and parses back to Python 3.8,
+          # so this pin is a floor, not a constraint. No pip install needed.
+          python-version: '3.12'
+
+      - name: Verify authored art metrics
+        run: |
+          set -o pipefail
+          # pipefail is required: without it the pipeline would report tee's
+          # exit status and the gate would pass no matter what the script said.
+          python Tools/verify-art-metrics.py 2>&1 | tee art-metrics-report.txt
+
+      - name: Publish report to the job summary
+        if: always()
+        run: cat art-metrics-report.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: art-metrics-report
+          path: art-metrics-report.txt

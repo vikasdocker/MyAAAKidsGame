@@ -1,0 +1,261 @@
+{
+  "name": "Dab (working title) — Typography",
+  "generated": "2026-09-30",
+  "art-bible-source": "design/art/art-bible.md",
+  "scope": "Small, bold, legible. No paragraphs, lore, dialogue, quests, help text, or body copy. 88% of strings are one or two words because of the five-word cap.",
+  "reference-resolution": "1080x1920 portrait, xxhdpi density bucket. 1 design px = 1/3 dp = 1/3 sp.",
+  "reference-width-px": 1080,
+  "reference-height-px": 1920,
+  "fonts": {
+    "display": {
+      "family": "Nunito",
+      "licence": "SIL OFL 1.1",
+      "licence-notes": "Permits commercial use, bundling, and embedding in a shipped binary. No per-seat fee, no seat tracking, no network, no runtime telemetry, no Reserved Font Names.",
+      "fallback": ["SF Pro Rounded", "Roboto", "sans-serif"],
+      "fallback-rule": "Geometric grotesque to rounded to grotesque. NEVER permitted to terminate in a serif.",
+      "weights": [700, 800, 900],
+      "usage": "Flourish stamp, single reward name, store art, parent-gate heading. The only in-world display string.",
+      "communicates": "Rounded terminals and a tall ascender frame reproduce the world's container language in type. Humanist skeleton, not geometric - a warm room with a living thing in it, not a candy-factory assembly line."
+    },
+    "body": {
+      "family": "Nunito",
+      "licence": "SIL OFL 1.1",
+      "fallback": ["SF Pro Rounded", "Roboto", "sans-serif"],
+      "weights": [600, 700],
+      "usage": "Idle control labels, record item titles, banner headlines, captions.",
+      "communicates": "High x-height (approx 0.55 em) and large aperture make a 48px label legible to a six-year-old at 240mm. One family means the letterforms on Results are the same ones on the palette."
+    },
+    "numeric": {
+      "family": "Nunito",
+      "licence": "SIL OFL 1.1",
+      "fallback": ["SF Pro Rounded", "Roboto", "sans-serif"],
+      "weights": [700],
+      "opentype-feature": "tnum",
+      "usage": "Count role only. Serials.",
+      "communicates": "Tabular figures prevent the counter-pill icon row from re-flowing when a count increments. A 2px jitter in a pebble is a hierarchy violation."
+    },
+    "monospace": {
+      "family": "DM Mono",
+      "licence": "SIL OFL 1.1",
+      "fallback": ["monospace"],
+      "weights": [400],
+      "shipped": false,
+      "usage": "Only if the record-serial stamp requires it. Fenced off from the child's play surface.",
+      "communicates": "This product does not need a monospace face. Named so the fallback chain is complete."
+    },
+    "child-hand": {
+      "family": "Patrick Hand",
+      "licence": "SIL OFL 1.1",
+      "fallback": ["cursive"],
+      "weights": [400],
+      "shipped": "conditional",
+      "usage": "Child-entered creature name on the record card. Nowhere else.",
+      "communicates": "The only handwriting in the game is the child's own. If the system wrote in a hand it would steal the single channel that says the child made this. Build-time selection from three fixed hands at onboarding, so a hand can never appear on a system control."
+    }
+  },
+  "rejected-families": [
+    { "family": "Fredoka", "was": "display candidate", "reason": "More explicitly candy, but weight range tops out short of 900 and numerals are less separable at 48px." },
+    { "family": "Lexend", "was": "body candidate", "reason": "Genuinely excellent readability research, but angled terminals read slightly clinical against the no-sharp-corners law, and the x-height advantage is not material at our sizes." },
+    { "family": "any slab serif, script face, Cooper-style retro face, or blackletter", "was": "considered", "reason": "Second visual language, which the shape grammar exists to prevent. Scripts additionally collide with the child's authorship channel." }
+  ],
+  "scale": {
+    "base": "48px",
+    "base-sp": 16,
+    "content-margin-px": 72,
+  "content-width-px": 936,
+    "step-ratios": {
+      "caption-to-body": 1.25,
+      "body-to-lead": 1.40,
+      "lead-to-subhead": 1.3333,
+      "subhead-to-headline": 1.2857,
+      "headline-to-display": 1.3333,
+      "geometric-mean": 1.3195
+    },
+    "step-ratios-note": "AUTHORITATIVE. The six tier sizes are fixed integers and each step is a distinct ratio; there is no single multiplier. 'geometric-mean' is recorded only to explain where the old 1.32 claim came from - it is a description of the set, NOT a value to compute the next tier from. Adding a tier means choosing one of the step-ratios above (or introducing a new one deliberately); never multiply by the mean. Using 1.32 produces 63.4, 83.6, 110.3, 145.6, none of which exist.",
+    "corrected": "2026-10-02. Previously declared \"ratio\": 1.32 as if every step used it. No step does. See step-ratios-note.",
+    "tiers": {
+      "caption": { "px": 48, "sp": 16, "weight": 700, "tracking": 8, "max-words": 5, "line-height": 1.20, "use": "Caption role, small labels, counters. The absolute floor of the product." },
+      "body": { "px": 60, "sp": 20, "weight": 600, "tracking": 0, "max-words": 5, "line-height": 1.20, "use": "Idle control labels, record item titles, banner headlines." },
+      "lead": { "px": 84, "sp": 28, "weight": 700, "tracking": 0, "max-words": 4, "line-height": 1.1, "use": "Feedback stamps, Results heading, palette tab names." },
+      "subhead": { "px": 112, "sp": 37, "weight": 800, "tracking": -10, "max-words": 3, "line-height": 1.1, "use": "Card titles, ability-slot names." },
+      "headline": { "px": 144, "sp": 48, "weight": 800, "tracking": -20, "max-words": 2, "line-height": 1.1, "use": "Flourish stamp, single reward name." },
+      "display": { "px": 192, "sp": 64, "weight": 900, "tracking": -30, "max-words": 1, "line-height": 1.1, "use": "Store art, parent-gate heading, the only in-world display string." }
+    }
+  },
+  "minimum-size": {
+    "value-px": 48,
+    "value-sp": 16,
+    "derivation": "48 design px on a 5.0in 720x1280 (256 ppi) device at CanvasScaler scale 0.667 = 32 device px em = 3.17mm em. Cap-height at 0.70em = 2.22mm. At a 240mm viewing distance that subtends 31.8 arcmin against a child acuity floor of approx 40 arcmin, a 1.26x margin. Weight 700 stem is 0.44mm against a 0.10mm 6-bit quantisation step, a 4.4x margin.",
+    "coupled-rule": "The size floor and the weight floor are ONE rule. The 48px minimum is only safe because the weight floor is 600. A reviewer who lowers one must lower neither; a reviewer who lowers both ships an unreadable game.",
+    "no-exceptions": ["tooltips", "captions", "debug overlays", "parent gate"]
+  },
+  "weight-policy": {
+    "shipped-weights": [600, 700, 800, 900],
+    "weight-never-expresses": [
+      "available vs unavailable - that is 88% scale and nothing else. The fill is byte-identical to --ui-surface, so weight must not be recruited to carry it either. See palette.json critical-pair C6.",
+      "pressed - that is 4% vertical squash + one value step",
+      "selected - that is 1.4x scale + one rung + thumb-zone position",
+      "success, failure, error, warning, urgency, newness, rarity - all refused by Pillar 2"
+    ],
+    "below-400-forbidden-because": [
+      "6-bit and low-DPI floor: weights 100-300 put stems below 3px at 48 design px on the 720p worst case, consuming the P3 quantisation margin in one pixel.",
+      "Hairline terminals are the inhabited strokes: the thinnest parts of l, t, f, r, i, j and the dot on i are precisely the glyphs a six-year-old is still learning to read.",
+      "The forbidden-grey argument: a thin weight IS a soft grey, and grey has no meaning in this product. Authoring thin text would make faded mean quiet, and the next designer would use it for unavailable.",
+      "400 is a fallback default, never an authored value."
+    ],
+    "legal-400": "Patrick Hand at 400, child-entered name role only. Handwriting is authorship, so the system may borrow it only from the child."
+  },
+  "alignment": {
+    "rule": "left-aligned, always",
+    "why": "A six-year-old re-reads the same control many times. A left edge gives a fixed return target every time. Centred text gives a different origin on every re-read and is the most common cause of a UI that feels slippery.",
+    "reserved-box": "Each control carries a reserved label box sized at BUILD TIME to the widest string in that control's full state set. The box is centred in the control; alignment is left inside it. A 3-word to 1-word swap therefore cannot re-centre or reflow the pebble."
+  },
+  "icon-lockup": {
+    "rule": "icon bounding height = 1.6 x label cap-height",
+    "cap-height-em": 0.70,
+    "floor-px": 72,
+    "floor-derivation": "1.6 x (48px x 0.70 cap-height) = 53.8px at the Caption tier. The 72px floor therefore applies to the control's TOUCH TARGET, not to the icon glyph: a 72px touch target still clears the 48 design-px minimum with margin, which is the accessibility requirement. Icon glyphs are free to render smaller than the target box; the box is what must stay >= 72px.",
+    "rejected-claims": {
+      "icon-em-2.4x-label-em": "REMOVED. The old spec said the icon em was 2.4x the label em, which is 115.2px at Caption and breaks the 72px floor it sat next to. The two numbers were mutually impossible and neither matched the 1.6x-cap-height rule. Do not reintroduce an em-based cap; size icons by the cap-height rule above and size touch targets by floor-px."
+    },
+    "lockups": {
+      "L1-icon-over-label": "Default. Gap 0.25 x label em. Container height = icon + gap + cap-height + 2 x 24px padding. Label width may never exceed the icon's inner 60% width, which is why L1 stacks rather than nests.",
+      "L2-icon-inline": "Records and ribbons only. Max 2 words. Label baseline = icon centre + 0.30 x label em."
+    },
+    "optical-nudges": {
+      "icon-artboard": "up to 3% of its own height above geometric centre",
+      "L2-label": "left by 4% of icon width",
+      "rule": "These are the only two permitted nudges. Nothing else may be nudged, and no nudge may exceed these values."
+    },
+    "two-removals-test": {
+      "text-removed": "Every control must still be identifiable by icon shape and by what happens when touched. Binding on 100% of controls.",
+      "text-and-icon-removed": "Required only for the four hub controls (paint, place, play, records), which must be separable by container silhouette alone. Not required elsewhere, because inventing a unique silhouette per control would be a second shape vocabulary."
+    }
+  },
+  "corner-radius-exemption": {
+    "rule": "The no-sharp-corners law binds type CONTAINERS (card, ribbon, label plate) and binds nothing about the glyphs inside them.",
+    "justification": [
+      "Scope: the no-polygon-edge law is about geometry, and a glyph outline is a rendered curve, not a polygon edge.",
+      "Purpose: the rule exists so the child cannot get stuck or hurt. The counter of an A cannot be touched, cannot snag, cannot be mistaken for a ledge.",
+      "Hierarchy: enforcing it on glyphs would round the counters of e, a, s, and g shut and collapse the letterforms, which is a worse outcome than the rule protects against, because one is cosmetic and the other is unreadable."
+    ],
+    "guarantee": "Every glyph is inset at least 12px from its container, so the rounded container is always the silhouette the child sees first.",
+    "typeface-consequence": "Select a font with round terminals and no sharp-cut variants, so no letterform has a corner to begin with."
+  },
+  "treatments": {
+    "pressed-ink": {
+      "description": "Cocoa Ink fill + 1.5px Dawn Cream highlight at 2px offset up-left, 55% opacity. Applied at Caption and above.",
+      "why": "The key light is behind and above, so an inset bevel catching light on the upper-left is the physically honest read for something lying flat on a lit page. The label reads as stamped into the paper.",
+      "introduces-no-colour": true,
+      "cap": "One treatment per string. Never combined with a drop shadow or an outline."
+    },
+    "permitted": [
+      { "effect": "outline/stroke", "limit": "max 2.0px (0.67dp), Cocoa Ink, Display tier only, only over the world" },
+      { "effect": "drop shadow", "limit": "one per string, y+3px, blur 4px, Peach Shadow #F6B9A0 at 0.30 opacity, ribbons and Display-tier world overlays only" },
+      { "effect": "dark outer glow", "limit": "Cocoa Ink, radius 6px, 35% opacity, offset 2px down, Display/Headline world overlays only" }
+    ],
+    "forbidden": [
+      "any glow in Sunlight Amber - DECLARED NON-INFORMATIONAL per C2, and invisible at a 1.8% luma delta from Dawn Cream",
+      "any additive or lightening term on text - a lightening gradient is banned outright as a gradient fill (see 'gradient fills' below), not because of a contrast cliff. CORRECTION 2026-10-02: the previous version justified this ban by claiming Ink drops from 6.24:1 to 2.7:1 at 12% additive opacity, failing large-text AA. Both figures were wrong and the claim is false. True values on --ui-active: 9.28:1 unlightened, 6.43:1 at 12% additive white, which passes both AA lines. Ink falls below 4.5:1 only above 24.0% additive, and below 3.0:1 only above 38.9%. The ban stands, but on the gradient-fill rule, not on a contrast cliff that does not exist.",
+      "italic, oblique, synthetic slanting",
+      "underline, strike-through, dashed emphasis",
+      "all-caps, small caps, caps-for-emphasis",
+      "gradient fills, multi-colour glyphs, two-tone text",
+      "multi-colour text shadows, or shadow plus outline stacked",
+      "blur, bevel, emboss, inner shadow, chrome, neon",
+      "typewriter, scramble, reveal, marquee, ticker, wave, bounce, pulse, breathing scale",
+      "ellipsis or silent truncation",
+      "hand-set kerning pairs",
+      "any text on the creature's body",
+      "any new colour token for type"
+    ],
+    "text-animation": "Linear, damped easing. Zero overshoot. Max 200ms. No word-by-word stagger, no per-character animation. Only the creature overshoots."
+  },
+  "accessibility": {
+    "minimum-size": "48px at 1080x1920, no exceptions",
+    "minimum-touch-target-px": 72,
+    "minimum-touch-target-source": "art-bible.md 3.4 'Touch targets >= 72 px on a 1080x1920 portrait screen'. This is the single source of truth for 72: icon-lockup.floor-px and scale.content-margin-px are both derived from it and must not be set independently.",
+    "contrast-metric": "WCAG 2.x relative luminance with sRGB linearisation, then (L_lighter + 0.05) / (L_darker + 0.05). Corrected 2026-10-02 - the previous figures were computed on an incorrect unstated metric. Recompute with Tools/verify-art-metrics.py; never hand-edit a ratio here.",
+    "verified-contrast": [
+      { "pair": "#4A382A on #F7E9D2", "ratio": 9.28, "verdict": "AAA at all sizes (>= 7.0)", "rule": "The default pairing for every label on a control." },
+      { "pair": "#4A382A on #DABE98", "ratio": 6.24, "verdict": "AA at all sizes (>= 4.5)", "rule": "Legal for record titles and card titles." },
+      { "pair": "#6B4F3A on #DABE98", "ratio": 4.21, "verdict": "BELOW the 4.5:1 normal-text line. AA large-text only (>= 3.0), so this pair is legal ONLY at Caption 48px weight >= 700, or at Body 60px and above. It is NOT legal at Caption 48px weight 600.", "rule": "See placement rule and secondary-text-size-coupling. 4.21 is only 0.29 below the normal-text threshold, so a small darkening of either colour would flip this pair out of compliance entirely - treat the two hexes as frozen." }
+    ],
+    "secondary-text-placement-rule": "--ui-text-secondary (#6B4F3A) is permitted ONLY on --ui-surface (#DABE98), --ui-surface-raised (#E8D5B8), or --ui-shell (#BEA88B). It is NEVER placed on --ui-active (#F7E9D2), because no ratio is verified for that pair. A caption needing to sit on an active control uses --ui-text-primary instead.",
+    "secondary-text-size-coupling": "Required, not advisory. The pair #6B4F3A on #DABE98 measures 4.21:1, which is below the 4.5:1 normal-text line and therefore legal only as large text: Caption 48px at weight >= 700 (16dp bold, clearing WCAG's 14pt-bold large-text threshold), or Body 60px and above at any permitted weight. Below those two conditions it is not used on any screen.",
+    "os-text-scale": {
+      "policy": "Read the OS scale and clamp to 1.00-1.40. Full 200% scale is not consumed.",
+      "why": "Layout geometry is fixed by 72px minimum touch targets, controls inside the bottom 40% of the display, and drag/tap parity with identical silhouettes. 200% multiplies label boxes by 2 and breaks the pebble geometry that makes the UI icon-first.",
+      "large-setting": "Parent-gated tier promotion of exactly one tier (x1.40). Caption 48 to 66, Body 60 to 84, Lead 84 to 112. From Lead upward it lands on an existing tier, so no new token is created.",
+      "no-width-change": "At Large, no control grows in width. The label grows, the icon grows to hold the 1.6:1 lockup, and overflow wraps to a second line with the container growing in height. The pebble never reflows horizontally, so the thumb-zone grid never moves.",
+      "no-truncation": "If a label does not fit after 2 lines the string is wrong, and the fix is the string table. Never ellipsis, never auto-shrink, never clipping.",
+      "surfaced": "If the OS scale is above 1.40, a Warm Shell ribbon offers the parent-gated Large setting rather than silently ignoring the system."
+    },
+    "greyscale": {
+      "test": "Render a screen in greyscale at 1280x720. Every string must be readable without knowing its colour, and no two labels on the same screen may become indistinguishable.",
+      "primary-on-active": "Luma gap 68.8% - colour-independent band with 4.3x margin",
+      "secondary-on-surface": "Luma gap 43.05% - colour-independent band (>= 16.0%) with 2.69x margin. THE WEAKEST LEGAL TEXT PAIR; a reviewer tests this one first. Note this is a luma gap and is unrelated to the 4.21:1 contrast ratio on the same pair, which is a WCAG relative-luminance measure.",
+      "role-ranking": "Carried by weight and size only. Adjacent text roles differ by >=100 weight or >=1.28x size. Never by colour.",
+      "verdict": "A label that requires colour to be read is a defect, not a colour limitation."
+    }
+  },
+  "label-swap-rules": {
+    "L1": "A text-bearing control may never change state by text alone. Any label swap requires all four of: icon silhouette change (the outline itself changes shape, not a hue swap), 200ms cross-fade + 4px rise with zero overshoot, an audio delta that REUSES an existing state's pitch/timbre/register shift (a label swap may never introduce a new sound), and a size-or-value delta of >=1 tier or 1.4x scale or one ladder rung.",
+    "L2": "The control never resizes. The reserved label box is sized to the widest string in the control's entire state set and fixed at build time. A control that changes width when its label changes is a defect.",
+    "L3": "No label may encode a number that moves. A changing count is a state, and a changing glyph inside a static box is the worst possible carrier. All counts live in a separate counter pill whose pebble-segment count duplicates the number as shapes.",
+    "L4": "Closed set of four permitted label swaps. Adding a fifth is an ADR event.",
+    "permitted-swaps": [
+      { "from": "empty", "to": "your mark", "icon": "outline pebble to pebble with a painted dot", "audio": "single soft click, up a fifth", "reuses": "Flourish settle" },
+      { "from": "sleepy", "to": "ready", "icon": "closed frill to open frill", "audio": "idle purr shifts up an octave", "reuses": "crown/base register split" },
+      { "from": "save", "to": "saved", "icon": "notched pebble outline to same pebble filled", "audio": "single soft click, up a fifth", "reuses": "Results settle" },
+      { "from": "look", "to": "match", "icon": "eye to two-tone pattern swatch", "audio": "prompt chime, +3 semitones", "reuses": "minigame register" }
+    ],
+    "forbidden-swaps": [
+      "any string containing a number that increments",
+      "any string containing a time, timer, or countdown",
+      "best, score, level, win, wrong, try again, failed, locked, unlocked, new!",
+      "any exclamation mark - urgency punctuation is a problem signal by definition"
+    ]
+  },
+  "roles": {
+    "count": 13,
+    "closed": true,
+    "note": "A fourteenth role requires an ADR. Platform-rendered store and legal boilerplate is not authored by this spec.",
+    "global-word-cap": 5,
+    "global-word-cap-exempt": [
+      { "roles": [9, 10], "reason": "audience: adult. The parent gate is read by an adult, not a six-year-old, and is the one place prose is permitted." },
+      { "roles": [12, 13], "reason": "context: outside the app. Store marketing copy is authored and reviewed by the publisher's own team and is never rendered on a device. It is excluded because it is not product surface, not because long strings are acceptable in the game." }
+    ],
+    "global-word-cap-note": "Corrected 2026-10-02. Role 13 (Store marketing subhead, 8 words) previously exceeded the cap with no exemption on record, so the rule and its exceptions disagreed. The exemption is now explicit and scoped to the two out-of-app audiences. Any NEW role above 5 words must add an exemption here or be capped - the cap still binds every in-app role without exception.",
+    "list": [
+      { "id": 1, "name": "Idle control label", "max-words": 3, "required": false },
+      { "id": 2, "name": "Active control label", "max-words": 2, "required": false },
+      { "id": 3, "name": "Dialogue-free feedback stamp", "max-words": 3, "required": false },
+      { "id": 4, "name": "Record item title", "max-words": 3, "required": true },
+      { "id": 5, "name": "Child-entered name", "max-words": 1, "max-characters": 10, "required": "conditional" },
+      { "id": 6, "name": "Serial / count", "max-words": 0, "max-characters": 4, "required": false },
+      { "id": 7, "name": "Caption", "max-words": 5, "required": false, "max-per-screen": 2 },
+      { "id": 8, "name": "System banner headline", "max-words": 3, "required": false },
+      { "id": 9, "name": "Parent-gate heading", "max-words": 8, "required": true, "audience": "adult" },
+      { "id": 10, "name": "Parent-gate body", "max-words": 40, "required": true, "audience": "adult", "note": "40 words total for the entire gate" },
+      { "id": 11, "name": "OS notification payload", "max-words": 3, "max-characters": 24, "required": true, "font": "platform system font" },
+      { "id": 12, "name": "Store marketing headline", "max-words": 4, "required": true, "context": "outside the app" },
+      { "id": 13, "name": "Store marketing subhead", "max-words": 8, "required": true, "context": "outside the app" }
+    ]
+  },
+  "implementation": {
+    "bundled": true,
+    "path": "Assets/Fonts/*.ttf",
+    "create-dynamic-font-from-os-font": "FORBIDDEN - makes shipped layout depend on device state and gives no fallback warning",
+    "static-instances": [600, 700, 800, 900],
+    "variable-font": "source file, not a build artefact",
+    "subset-glyphs": 200,
+    "subset-budget-kb-per-weight": 28,
+    "subset-budget-kb-total": 112,
+    "licence-bundling": "OFL licence text ships in Assets/ThirdPartyLicenses/ - an OFL obligation, not a formality",
+    "atlas": "TMP SDF, NOT MSDF. MSDF exists to recover sharp corners at small sizes; this product has none and it costs fill rate on the 6-bit floor.",
+    "glyph-padding-px": 12,
+    "multi-atlas": false,
+    "addressables": "Fonts are not routed through Addressables."
+  }
+}

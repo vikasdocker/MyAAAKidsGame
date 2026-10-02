@@ -1,0 +1,288 @@
+{
+  "name": "Dab (working title) — Color Palette",
+  "generated": "2026-09-30",
+  "art-bible-source": "design/art/art-bible.md",
+  "metric-notes": {
+    "luma": "Rec.709 gamma-encoded, 0.2126R+0.7152G+0.0722B, reported 0-100. This is the gate for the greyscale test.",
+    "saturation": "HSV (max-min)/max, 0-100. This is the gate for the saturation budget. NOT HSL.",
+    "hue": "HSL hue, degrees 0-360.",
+    "contrast": "WCAG relative luminance, used only for UI ratios."
+  },
+  "invariants": {
+    "greyscale-test": "No state, tool, or result may be distinguishable by hue alone. Every semantic color carries a redundant non-color channel.",
+    "saturation-wall": "40.0% HSV S. Only tier-0 paints may exceed it.",
+    "coat-cap": "25.0% HSV S +/-2.0",
+    "environment-cap": "40.0% HSV S +/-2.0",
+    "luminance-floor": "No diffuse surface below luma 25.0%. L0-L1 are stroke-only.",
+    "ratio-ceiling": "3.5:1 maximum in any state.",
+    "print-hue-constancy": "Mask family hue spread <= 10 degrees, so color vision deficiency cannot affect print separability."
+  },
+  "primary": [
+    {
+      "name": "Dawn Cream",
+      "hex": "#F7E9D2",
+      "rgb": [247, 233, 210],
+      "hsl": { "h": 37.3, "s": 69.81, "l": 89.61 },
+      "hsv-s": 15.0,
+      "luma": 91.9,
+      "role": "The blank page, and the creature's own untouched self. The only large light surface in the game; reads as quiet, so a saturated mark on it reads as new.",
+      "context": "world",
+      "tier": 1,
+      "notes": "Surface rung L7. No other diffuse surface sits at this value."
+    },
+    {
+      "name": "Honey Field",
+      "hex": "#E8C79B",
+      "rgb": [232, 199, 155],
+      "hsl": { "h": 34.29, "s": 62.6, "l": 75.88 },
+      "hsv-s": 33.2,
+      "luma": 79.5,
+      "role": "Sunlight that has landed on something. Ground bowl, props, sunlit side of every surface. The colour of the room being warm, not of the room being big.",
+      "context": "world",
+      "tier": 3,
+      "notes": "Environment rung L6. UI card surface derives from this."
+    },
+    {
+      "name": "Sunlight Amber",
+      "hex": "#FFE3B8",
+      "rgb": [255, 227, 184],
+      "hsl": { "h": 36.34, "s": 100.0, "l": 86.08 },
+      "hsv-s": 27.8,
+      "luma": 90.1,
+      "role": "Light itself. Key colour, sun disc, flourish halo, focus glow. This is attention, and attention is warm.",
+      "context": "world",
+      "tier": 4,
+      "notes": "LIGHT TERM - never a surface. Only 1.8% luma from Dawn Cream, so it is DECLARED NON-INFORMATIONAL and may not mark a boundary, target, selection, or hit area."
+    },
+    {
+      "name": "Peach Shadow",
+      "hex": "#F6B9A0",
+      "rgb": [246, 185, 160],
+      "hsl": { "h": 17.44, "s": 82.69, "l": 79.61 },
+      "hsv-s": 35.0,
+      "luma": 76.9,
+      "role": "The colour of not-wrong. Every shadow, contact-occlusion, and settled stroke. What a shadow looks like when nothing is wrong.",
+      "context": "world",
+      "tier": 4,
+      "notes": "LIGHT/CONTACT TERM - never a hero surface. The only legal shadow colour in the product. Never neutral, grey, black, or blue."
+    },
+    {
+      "name": "Rim Rose",
+      "hex": "#FFB0D0",
+      "rgb": [255, 176, 208],
+      "hsl": { "h": 335.7, "s": 100.0, "l": 84.51 },
+      "hsv-s": 31.0,
+      "luma": 76.5,
+      "role": "The creature is alive. Upper-silhouette half of the two-tone rim, and nothing else in the world.",
+      "context": "world",
+      "tier": 4,
+      "notes": "LIGHT TERM - upper rim only (top 55% of silhouette edge). 14.0% luma from Mint Halo, so the two rim terms may NEVER be the sole evidence for any state."
+    },
+    {
+      "name": "Cocoa Ink",
+      "hex": "#4A382A",
+      "rgb": [74, 56, 42],
+      "hsl": { "h": 26.25, "s": 27.59, "l": 22.75 },
+      "hsv-s": 43.2,
+      "luma": 23.1,
+      "role": "The child's authored line. Every print mask, record-stamp outline, UI label, icon stroke, and the wet stroke's shadow side. Intent made permanent.",
+      "context": "world",
+      "tier": 2,
+      "notes": "The only color permitted below the 25% luminance floor, because it is a STROKE not a surface."
+    },
+    {
+      "name": "Mint Halo",
+      "hex": "#BFF3E2",
+      "rgb": [191, 243, 226],
+      "hsl": { "h": 160.38, "s": 68.42, "l": 85.1 },
+      "hsv-s": 21.4,
+      "luma": 90.5,
+      "role": "The creature is grounded. Base-of-silhouette half of the rim. Bound to position (the feet) and stillness, never to an event.",
+      "context": "world",
+      "tier": 4,
+      "notes": "HARD-LIMITED TOKEN. Lower rim only (bottom 45% of silhouette edge). No surface use, no UI token, no particle use. Only hue between 150 and 200 degrees, rationed because no light in this world is cold. Do NOT confuse with tier-0 Splash Mint #3FC8A0."
+    }
+  ],
+  "value-ladder": [
+    { "rung": "L0", "name": "Deep Cocoa", "hex": "#33251B", "rgb": [51, 37, 27], "luma": 15.4, "permitted-use": "mask darkest, line art only" },
+    { "rung": "L1", "name": "Cocoa Ink", "hex": "#4A382A", "rgb": [74, 56, 42], "luma": 23.1, "permitted-use": "strokes, UI text, no diffuse surface" },
+    { "rung": "L2", "name": "Cocoa", "hex": "#6B4F3A", "rgb": [107, 79, 58], "luma": 32.7, "permitted-use": "mask mid-dark, deep UI text" },
+    { "rung": "L3", "name": "Umber", "hex": "#876546", "rgb": [135, 101, 70], "luma": 41.6, "permitted-use": "mask mid, darkest value any shadow may reach" },
+    { "rung": "L4", "name": "Tan", "hex": "#A98C6B", "rgb": [169, 140, 107], "luma": 56.4, "permitted-use": "mask light-mid, UI body text" },
+    { "rung": "L5", "name": "Sand", "hex": "#C0A584", "rgb": [192, 165, 132], "luma": 66.0, "permitted-use": "lightest mask permitted (rule P1, 25.9% over coat)" },
+    { "rung": "L6", "name": "Honey Field", "hex": "#E8C79B", "rgb": [232, 199, 155], "luma": 79.5, "permitted-use": "environment rung, ground bowl, props, UI card" },
+    { "rung": "L7", "name": "Dawn Cream", "hex": "#F7E9D2", "rgb": [247, 233, 210], "luma": 91.9, "permitted-use": "surface rung, coat, page, active control" },
+    { "rung": "L8", "name": "Highlight", "hex": "#FFFBF4", "rgb": [255, 251, 244], "luma": 98.6, "permitted-use": "SPECULAR AND ADDITIVE LIGHT ONLY - never a diffuse surface" }
+  ],
+  "value-step-constant": {
+    "multiplier": 0.85,
+    "local-band-rungs": ["L4", "L5", "L6"],
+    "local-band-tolerance": 0.02,
+    "applies-to": "HSL lightness, per value step, LOCALLY in the L4-L6 band only. This is NOT a global ladder ratio: the nine rungs step by 1.09x to 1.49x, and only L4->L5->L6 sit near 1/0.85. The whole palette is deliberately not a geometric series, for the same reason the type ladder is not.",
+    "rationale": "Local rung ratio in the L4-L6 band is approx x0.84, which is MORE contrast than one rung on light values. Since the 3.5:1 ceiling is a maximum, the safe direction is to dim less than a full rung. x0.85 is deliberately conservative. Re-derive if the ladder is retuned."
+  },
+  "print-mask-family": {
+    "description": "One hue family, seven values, ONE material and ONE texture slot. Hue is constant across all nine print classes, so color vision deficiency has zero effect on print separability.",
+    "hue-range": "H 25.00-33.00",
+    "hue-spread": 8.0,
+    "shader-variants-consumed": 0,
+    "ramps": [
+      { "id": "M0", "name": "Deep Cocoa", "hex": "#33251B", "rgb": [51, 37, 27], "luma": 15.4 },
+      { "id": "M1", "name": "Cocoa Ink", "hex": "#4A382A", "rgb": [74, 56, 42], "luma": 23.1 },
+      { "id": "M2", "name": "Cocoa", "hex": "#6B4F3A", "rgb": [107, 79, 58], "luma": 32.7 },
+      { "id": "M3", "name": "Umber", "hex": "#876546", "rgb": [135, 101, 70], "luma": 41.6 },
+      { "id": "M4", "name": "Tan", "hex": "#A98C6B", "rgb": [169, 140, 107], "luma": 56.4 },
+      { "id": "M5", "name": "Sand", "hex": "#C0A584", "rgb": [192, 165, 132], "luma": 66.0 },
+      { "id": "M6", "name": "Dawn Cream", "hex": "#F7E9D2", "rgb": [247, 233, 210], "luma": 91.9 }
+    ],
+    "rules": {
+      "P1": "Mask-to-coat local contrast >= 25.0% luma. Achieved minimum 25.9% (Sand 66.0 vs coat 91.9). Margin 0.9.",
+      "P2": "Class-to-class integrated luma >= 5.0%, categorical edge-character override permitted. Minimum achieved 2.2% (Spot-Round / Spot-Angular).",
+      "P3": "No two mask values within one 6-bit quantisation step: >= 1.6%. Achieved minimum 7.7%. Margin 4.8x.",
+      "P4": "Hue spread <= 10 degrees across M0-M5. Achieved 8.0 degrees. M6 Dawn Cream is the coat, not a mask, and is excluded from the spread.",
+      "P5": "No print feature thinner than 0.08 H (= 5.1 px at 64 px render)."
+    }
+  },
+  "print-classes": [
+    { "id": 1, "name": "Solid", "mask": "none", "mask-luma": null, "local-contrast": 0.0, "coverage-percent": 0, "integrated-luma": 91.9, "edge-character": "zero internal edges" },
+    { "id": 2, "name": "Spot-Round", "mask": "M0 Deep Cocoa", "mask-luma": 15.4, "local-contrast": 76.5, "coverage-percent": 8, "integrated-luma": 85.8, "edge-character": "isolated blobs, soft edges, >=5 blobs" },
+    { "id": 3, "name": "Spot-Angular", "mask": "M2 Cocoa", "mask-luma": 32.7, "local-contrast": 59.2, "coverage-percent": 14, "integrated-luma": 83.6, "edge-character": "isolated blobs, 45 degree sharp corners, >=5" },
+    { "id": 4, "name": "Ripple", "mask": "M3 Umber", "mask-luma": 41.6, "local-contrast": 50.3, "coverage-percent": 22, "integrated-luma": 80.8, "edge-character": "nested concentric arcs, >=3 rings" },
+    { "id": 5, "name": "Checker", "mask": "M1 Cocoa Ink", "mask-luma": 23.1, "local-contrast": 68.8, "coverage-percent": 30, "integrated-luma": 71.3, "edge-character": "hard dither, two orthogonal directions, no dominant direction" },
+    { "id": 6, "name": "Spiral", "mask": "M0 Deep Cocoa", "mask-luma": 15.4, "local-contrast": 76.5, "coverage-percent": 30, "integrated-luma": 69.0, "edge-character": "one unbroken continuous curve, min 0.08 H wide" },
+    { "id": 7, "name": "Band", "mask": "ramp M0 to M2, mean 24.1", "mask-luma": 24.1, "local-contrast": 67.8, "coverage-percent": 42, "integrated-luma": 63.4, "edge-character": "smooth ramp, zero hard edges", "notes": "Corrected 2026-10-02. local-contrast was 76.5, which is Spot-Round's value for M0 Deep Cocoa, not this class's. A ramp is measured against its own mean mask luma: 91.9 - 24.1 = 67.8. integrated-luma was already correct and independently confirms mask-luma 24.1. Found by Tools/verify-art-metrics.py." },
+    { "id": 8, "name": "Stripe-Vertical", "mask": "M1 Cocoa Ink", "mask-luma": 23.1, "local-contrast": 68.8, "coverage-percent": 50, "integrated-luma": 57.5, "edge-character": "hard alternating, vertical rhythm" },
+    { "id": 9, "name": "Stripe-Horizontal", "mask": "M0 Deep Cocoa", "mask-luma": 15.4, "local-contrast": 76.5, "coverage-percent": 62, "integrated-luma": 44.5, "edge-character": "hard alternating, horizontal rhythm" }
+  ],
+  "semantic": [
+    { "name": "Unauthored / resting surface", "hex": "#F7E9D2", "rgb": [247, 233, 210], "meaning": "Nothing here has been decided yet, and that is a good state.", "colorblind-backup": "value - highest rung L7, luma 91.9%, reads as the brightest large field", "context": "world+ui" },
+    { "name": "The world, sunlit and unremarkable", "hex": "#E8C79B", "rgb": [232, 199, 155], "meaning": "This is the world, and it is pleased to be here.", "colorblind-backup": "position (lower third, continuous curve) + pattern (untextured, no internal edges)", "context": "world" },
+    { "name": "Attention / celebration glow", "hex": "#FFE3B8", "rgb": [255, 227, 184], "meaning": "This is attention, and attention is warm.", "colorblind-backup": "motion (emissive rise, never a static tint) + value (additive luma >=8% over local field)", "context": "world", "restriction": "DECLARED NON-INFORMATIONAL vs Dawn Cream. May not mark a boundary, target, selection, or hit area." },
+    { "name": "Not-wrong", "hex": "#F6B9A0", "rgb": [246, 185, 160], "meaning": "The light ended here. Never that you did badly.", "colorblind-backup": "value (luma 76.9%) + softness (gradient falloff, never a hard edge)", "context": "world+ui" },
+    { "name": "Alive", "hex": "#FFB0D0", "rgb": [255, 176, 208], "meaning": "Life here. Upper silhouette edge, and nothing else.", "colorblind-backup": "position (upper 55% of silhouette edge) + additive luma rise. NEVER colour alone - 14.0% luma from Mint Halo.", "context": "world" },
+    { "name": "Grounded", "hex": "#BFF3E2", "rgb": [191, 243, 226], "meaning": "The creature is standing on something. Base of the silhouette edge only.", "colorblind-backup": "position (lower 45% of silhouette edge) + stillness (removed entirely in Painting, whisper in Minigame)", "context": "world" },
+    { "name": "The authored line", "hex": "#4A382A", "rgb": [74, 56, 42], "meaning": "The drawing itself. Intent made permanent.", "colorblind-backup": "shape - strokes are drawn, never filled regions; weight >=8px with rounded caps", "context": "world+ui" },
+    { "name": "Minigame success", "hex": null, "rgb": null, "meaning": "You can do this. Never graded by performance quality.", "colorblind-backup": "pattern - FIXED 12-spoke radial, identical every time, never re-tinted + body squash 82% to stretch 112% overshoot. Identical in greyscale every time.", "context": "world", "notes": "Deliberately carries NO fixed colour, because it inherits the child's own paint hue." },
+    { "name": "Unavailable control", "hex": "#DABE98", "rgb": [218, 190, 152], "meaning": "This is smaller right now. Not forbidden, not locked, not a problem.", "colorblind-backup": "size 88%. That is the ONLY implemented channel - the fill is byte-identical to --ui-surface, so colour and value carry nothing (C6). Never greyed, never crossed out, never padlocked.", "context": "ui" },
+    { "name": "Selected / active", "hex": "#F7E9D2", "rgb": [247, 233, 210], "meaning": "This is the one you have chosen.", "colorblind-backup": "size 1.4x + one ladder rung + thumb-zone position", "context": "ui" },
+    { "name": "Focus", "hex": "#4A382A", "rgb": [74, 56, 42], "meaning": "The control you are touching.", "colorblind-backup": "shape - 4px outer ring at 4.85:1 against --ui-shell. The 2px Sunlight Amber inner ring carries NOTHING (C2) and is decoration only.", "context": "ui" }
+  ],
+  "refused-semantics": [
+    { "refused": "red = error / danger / damage / low health", "reason": "There is nothing to be in danger from. A red pixel reads as a problem to a six-year-old, and Pillar 2 forbids showing problems.", "actual-permitted-meaning": "Authorship only. Cranberry and Cherry Pop are tier-0 paints. Red may NEVER appear on a system UI surface, environment material, creature base coat, or light term." },
+    { "refused": "gold = currency / rarity / premium / locked", "reason": "There is no currency and no rarity. Gold-as-value is the most manipulative visual grammar in games.", "actual-permitted-meaning": "Warmth and attention. Sunbeam is a tier-0 paint; the only gold-family light term is Sunlight Amber." },
+    { "refused": "grey = unavailable / disabled / inactive", "reason": "Explicitly forbidden by Pillar 2 and the shape grammar.", "actual-permitted-meaning": "Nothing. Grey has no meaning in this product." },
+    { "refused": "blue = cold / unfriendly / other", "reason": "Cold light is forbidden, and a cold hue on a creature reads as unapproachable.", "actual-permitted-meaning": "Authorship only. Bluebell, Splash, Indigo Pop, and Violet Pop are tier-0 paints. No system surface uses blue." },
+    { "refused": "green = go / success / correct", "reason": "Success must be legible in greyscale and must not be graded by performance quality.", "actual-permitted-meaning": "Authorship only. Success is carried by shape, motion, and a fixed 12-spoke radial burst." },
+    { "refused": "black = premium / depth / danger / pro", "reason": "A black surface drops below the 25% luminance floor and reads as a hole.", "actual-permitted-meaning": "Cocoa Ink only, as the authored line. A drawing colour, never a surface colour." },
+    { "refused": "darkened = consequence", "reason": "Darkening-as-punishment is the oldest guilt mechanic in games.", "actual-permitted-meaning": "Peach Shadow only - the colour of not-wrong." },
+    { "refused": "saturation = quality / performance grade", "reason": "Grading the child's work by colour would rank children.", "actual-permitted-meaning": "Saturation is reserved for the child. No system asset may exceed the coat cap." }
+  ],
+  "tier0-paint-palette": {
+    "description": "The only colours allowed above 40% HSV S, because they are the only ones the child made.",
+    "layout": "3 columns x 4 rows, row-major. This order is load-bearing - it is the order the adjacency rule was solved against.",
+    "adjacency-rule": "Any two adjacent swatches must satisfy delta-hue >= 25.0 OR delta-luma >= 5.0. All 17 adjacencies pass - 16 on the hue channel, 1 (Petal/Cranberry) on the luma channel. A 3x4 grid has 17 edges: 8 horizontal + 9 vertical.",
+    "minimum-hue-separation-whole-set": 5.5,
+    "declared-residual": "Petal (hue 332.0, luma 59.9) and Cranberry (hue 337.5, luma 28.3) sit 5.5 degrees apart and merge under deuteranopia/protanopia. Declared, not fixed - permitted because they are 31.6% apart in luma, well above the 15.0% value channel of check 5, and palette-entry selection is a state with 3 non-colour backups (1.10x scale, one full rung, 4px keyline). The previously declared Tangerine/Grass Pop residual is WITHDRAWN: at 69.3 degrees apart they clear the hue channel on their own.",
+    "paints": [
+      { "grid": "R1C1", "name": "Cherry Pop", "hex": "#E42C48", "rgb": [228, 44, 72], "hue": 350.9, "hsv-s": 80.7, "luma": 33.4, "note": "Default first pick." },
+      { "grid": "R1C2", "name": "Splash", "hex": "#3FC4E0", "rgb": [63, 196, 224], "hue": 190.4, "hsv-s": 71.9, "luma": 66.6 },
+      { "grid": "R1C3", "name": "Sunbeam", "hex": "#F5D33C", "rgb": [245, 211, 60], "hue": 49.0, "hsv-s": 75.5, "luma": 81.3, "note": "Highest-luma paint by a wide margin - 15.4% above the next tier (Splash, 66.6)." },
+      { "grid": "R2C1", "name": "Bluebell", "hex": "#4A7FE0", "rgb": [74, 127, 224], "hue": 218.8, "hsv-s": 67.0, "luma": 48.1 },
+      { "grid": "R2C2", "name": "Tangerine", "hex": "#F28A2E", "rgb": [242, 138, 46], "hue": 28.2, "hsv-s": 81.0, "luma": 60.2 },
+      { "grid": "R2C3", "name": "Leaf", "hex": "#4FA83C", "rgb": [79, 168, 60], "hue": 109.4, "hsv-s": 64.3, "luma": 55.4 },
+      { "grid": "R3C1", "name": "Violet Pop", "hex": "#8B4FD6", "rgb": [139, 79, 214], "hue": 266.7, "hsv-s": 63.1, "luma": 39.8, "note": "Third-darkest paint. Relief shader requirement applies - must hold 0.02-0.04 H relief against a print mask." },
+      { "grid": "R3C2", "name": "Grass Pop", "hex": "#6FBF3F", "rgb": [111, 191, 63], "hue": 97.5, "hsv-s": 67.0, "luma": 64.6 },
+      { "grid": "R3C3", "name": "Petal", "hex": "#E87FB0", "rgb": [232, 127, 176], "hue": 332.0, "hsv-s": 45.3, "luma": 59.9, "note": "Tightest hue adjacency in the grid: only 5.5 degrees from Cranberry. Separated by VALUE instead - 31.6% luma apart, which clears the 15.0% value channel of check 5." },
+      { "grid": "R4C1", "name": "Splash Mint", "hex": "#3FC8A0", "rgb": [63, 200, 160], "hue": 162.5, "hsv-s": 68.5, "luma": 65.9, "note": "MUST NOT be confused with the Mint Halo rim term #BFF3E2. Distinct by 47.1% HSV S (68.5 vs 21.4) and by 24.6% luma." },
+      { "grid": "R4C2", "name": "Indigo Pop", "hex": "#5B5BE0", "rgb": [91, 91, 224], "hue": 240.0, "hsv-s": 59.4, "luma": 39.5 },
+      { "grid": "R4C3", "name": "Cranberry", "hex": "#C4215E", "rgb": [196, 33, 94], "hue": 337.5, "hsv-s": 83.2, "luma": 28.3, "note": "LOWEST-luma paint. Relief shader requirement applies - the strongest adversarial case against print masks (see C4)." }
+    ]
+  },
+  "saturation-budget": {
+    "tolerance": "+/- 2.0% absolute HSV S on surface tiers, +/- 1.0% absolute luma on the ladder, +/- 0.5% on tier-0 authored values",
+    "tiers": [
+      { "tier": 0, "consumer": "the child's twelve paints", "hsv-s-ceiling": 100.0, "peak-claim-percent": 100 },
+      { "tier": 1, "consumer": "creature base coat", "hsv-s-ceiling": 25.0, "actual": 15.0, "peak-claim-percent": 15 },
+      { "tier": 2, "consumer": "print masks (Cocoa family)", "hsv-s-ceiling": 48.2, "actual": 48.1, "peak-claim-percent": 48 },
+      { "tier": 3, "consumer": "environment surfaces", "hsv-s-ceiling": 40.0, "actual": 33.2, "peak-claim-percent": 35 },
+      { "tier": 4, "consumer": "light terms (no surface use)", "hsv-s-ceiling": 35.0, "actual": 35.0, "peak-claim-percent": 35 },
+      { "tier": 5, "consumer": "UI surfaces", "hsv-s-ceiling": 33.2, "actual": 33.2, "peak-claim-percent": 33 },
+      { "tier": 6, "consumer": "UI text and line work", "hsv-s-ceiling": 48.2, "actual": 45.8, "peak-claim-percent": 46, "note": "Raised from 43.2 on 2026-10-01: --ui-text-secondary is Cocoa (#6B4F3A) at 45.8%, not Cocoa Ink. Aligned to the same 48.2 cocoa-family ceiling as tier 2. This is the ink/stroke family - thin line art, never a painted surface - so it stays outside the 40% surface wall by design." }
+    ],
+    "rule": "Everything that is not the child's paint lives at or below 40% HSV S. The child's paint is the only thing permitted above it."
+  },
+  "colorblind-safety": {
+    "collapse-test": {
+      ">= 16.0% luma delta": "colour-independent, no further work required",
+      "5.0-15.9%": "colour-weak, must carry a redundant channel",
+      "2.0-4.9%": "colour-void, must carry shape/motion/size/position. Value is not a legal carrier.",
+      "< 2.0%": "non-informational, must be declared in writing"
+    },
+    "critical-pairs": [
+      { "id": "C1", "pair": "Rim Rose #FFB0D0 vs Mint Halo #BFF3E2", "luma-delta": 14.0, "verdict": "HARD BAR - the two rim terms may never be the sole evidence for any state, tool, or result", "carrier": "vertical position on the silhouette" },
+      { "id": "C2", "pair": "Dawn Cream #F7E9D2 vs Sunlight Amber #FFE3B8", "luma-delta": 1.8, "verdict": "DECLARED NON-INFORMATIONAL", "carrier": "nothing, by design" },
+      { "id": "C3", "pair": "wet paint vs dry paint (Cherry Pop)", "luma-delta": 6.0, "verdict": "PASS", "carrier": "shape (0.02-0.04 H relief) + motion (0.8s emissive, 0.6s settle)" },
+      { "id": "C4", "pair": "print mask vs painted mark - SIX declared value collisions (Splash Mint/Sand M5 0.1, Splash/Sand M5 0.6, Cherry Pop/Cocoa M2 0.7, Leaf/Tan M4 1.0, Grass Pop/Sand M5 1.4, Violet Pop/Umber M3 1.8)", "luma-delta": 1.8, "verdict": "PASS on three channels; value declared NON-INFORMATIONAL for all six", "carrier": "shape (0.02-0.04 H relief + 0.06 H feathered crayon edge) + pattern (directional streak) + motion (wet-dry lifecycle)" },
+      { "id": "C5", "pair": "--ui-active #F7E9D2 vs --ui-surface #DABE98", "luma-delta": 16.1, "verdict": "PASS, colour-independent", "carrier": "size 1.4x + value + thumb-zone position" },
+      { "id": "C6", "pair": "available vs unavailable control - IDENTICAL FILL #DABE98 on both sides, luma delta 0.0", "luma-delta": 0.0, "verdict": "NON-INFORMATIONAL, declared in writing as the collapse test requires. Colour carries NOTHING. The state is held entirely by geometry.", "carrier": "size 88% (the ONLY implemented channel) + a label box reserved at build time to the widest string across the control's full state set, so the pebble never resizes and the thumb-zone grid never moves.", "open-decision": "A one-rung value drop (L6 Honey Field -> L5 Tan) is named in the original intent but is NOT implemented: --ui-unavailable is byte-identical to --ui-surface. Either author --ui-unavailable as a genuine L5 token, or drop the rung from the spec. Until then the spec and the tokens disagree and the sizing rule is the whole contract. This is recorded as unresolved, not silently reconciled.", "notes": "Corrected 2026-10-02. Previously claimed a 12.6% luma delta, which does not exist - the two fills are identical. That figure appears to have been copied from the C5 pair. Do not reintroduce a colour delta here." },
+      { "id": "C7", "pair": "minigame success burst", "luma-delta": null, "verdict": "PASS - nothing to fail, pattern is fixed", "carrier": "fixed 12-spoke radial + body squash 82% to stretch 112%" },
+      { "id": "C8", "pair": "Dawn Cream #F7E9D2 (creature base coat) vs Honey Field #E8C79B (ground bowl)", "luma-delta": 12.4, "verdict": "PASS", "carrier": "value + additive luma >= 8% on the silhouette edge", "notes": "Corrected 2026-10-02. Hexes added: the pair previously asserted a 12.4 delta against no referent, so the claim could not be checked. 91.9 - 79.5 = 12.4. Clears the 16% colour-independent bar? NO - 12.4 is below 16.0, so this pair is NOT automatically safe; it passes only because of the declared non-colour carrier." },
+      { "id": "C9", "pair": "Honey Field #E8C79B (ground) vs Peach Shadow #F6B9A0 (cast shadow)", "luma-delta": 2.6, "verdict": "NON-INFORMATIONAL by design", "carrier": "nothing - the shadow grounds the creature and is not a readability channel", "notes": "Corrected 2026-10-02. Hexes added; 79.5 - 76.9 = 2.6. The shadow is LIGHTER in value than the ground, which is legal here precisely because the pair is declared NON-INFORMATIONAL: a cast shadow is a grounding cue, never a readability channel. If this is ever promoted to carry information it fails immediately at 2.6%." }
+    ]
+  },
+  "ui": {
+    "divergence": "Two ways only. (1) Page ground is one rung dimmer than the world (Honey Field L6 -> Warm Shell, between L5 and L6) so a held panel sits below the world it floats over and never competes with the creature. (2) No divergence at all on the active surface - active is the same paper as the world's brightest surface. Everything else is identical to the world palette. No UI color exists that is not in the world palette.",
+    "tokens": [
+      { "name": "--ui-shell", "hex": "#BEA88B", "rgb": [190, 168, 139], "luma": 66.9, "hsv-s": 26.8, "role": "page ground, menu dim", "redundant-channel": "value - below the world it floats over" },
+      { "name": "--ui-surface", "hex": "#DABE98", "rgb": [218, 190, 152], "luma": 75.8, "hsv-s": 30.3, "role": "card, panel, palette tray", "redundant-channel": "value + position" },
+      { "name": "--ui-surface-raised", "hex": "#E8D5B8", "rgb": [232, 213, 184], "luma": 84.3, "hsv-s": 20.7, "role": "raised card, tooltip", "redundant-channel": "value + shadow offset" },
+      { "name": "--ui-active", "hex": "#F7E9D2", "rgb": [247, 233, 210], "luma": 91.9, "hsv-s": 15.0, "role": "active control, pressed card", "redundant-channel": "size 1.4x + value + thumb-zone position" },
+      { "name": "--ui-text-primary", "hex": "#4A382A", "rgb": [74, 56, 42], "luma": 23.1, "hsv-s": 43.2, "role": "all body and label text", "redundant-channel": "weight >= 600, size >= 28px", "contrast-on-active": 9.28, "contrast-on-surface": 6.24 },
+      { "name": "--ui-text-secondary", "hex": "#6B4F3A", "rgb": [107, 79, 58], "luma": 32.7, "hsv-s": 45.8, "role": "supporting caption", "redundant-channel": "value + weight", "contrast-on-surface": 4.21, "note": "4.21:1 is below the 4.5:1 normal-text line. Legal at Caption 48px weight >= 700 (large-text) or Body 60px and above. Never at Caption 48px weight 600." },
+      { "name": "--ui-stroke", "hex": "#4A382A", "rgb": [74, 56, 42], "luma": 23.1, "hsv-s": 43.2, "role": "icon strokes, control outlines", "redundant-channel": "shape - >= 8px, rounded caps" },
+      { "name": "--ui-keyline", "hex": "#F7E9D2", "rgb": [247, 233, 210], "luma": 91.9, "hsv-s": 15.0, "role": "4px border on every palette swatch", "redundant-channel": "shape - the border IS the boundary" },
+      { "name": "--ui-focus-outer", "hex": "#4A382A", "rgb": [74, 56, 42], "luma": 23.1, "hsv-s": 43.2, "role": "focus ring outer", "redundant-channel": "shape - 4px ring at 4.85:1 against --ui-shell" },
+      { "name": "--ui-focus-inner", "hex": "#FFE3B8", "rgb": [255, 227, 184], "luma": 90.1, "hsv-s": 27.8, "role": "focus ring inner 2px ONLY", "redundant-channel": "shape - carries NOTHING, per C2" },
+      { "name": "--ui-unavailable", "hex": "#DABE98", "rgb": [218, 190, 152], "luma": 75.8, "hsv-s": 30.3, "role": "unavailable control fill", "redundant-channel": "size 88% ONLY. Fill is byte-identical to --ui-surface, so colour and value carry nothing. See C6.", "note": "The one-rung value drop named in the original intent is NOT implemented here; see colorblind-safety.critical-pairs C6 open-decision." }
+    ],
+    "contrast-verification": [
+      { "pair": "--ui-text-primary on --ui-active", "ratio": 9.28, "verdict": "PASS - AAA at all sizes" },
+      { "pair": "--ui-text-primary on --ui-surface", "ratio": 6.24, "verdict": "PASS - AA at all sizes" },
+      { "pair": "--ui-text-secondary on --ui-surface", "ratio": 4.21, "verdict": "PASS - AA large-text only. Below 4.5:1, so this pair is legal only at Caption 48px weight >= 700 or Body 60px and above. See typography.json accessibility.secondary-text-size-coupling." },
+      { "pair": "--ui-stroke on --ui-shell", "ratio": 4.85, "verdict": "PASS - AA for non-text UI" },
+      { "pair": "--ui-active on --ui-shell", "ratio": 1.91, "verdict": "DELIBERATELY LOW - an active control is distinguished by 1.4x scale and one rung of elevation shadow, never by fill contrast. Raising this makes the UI compete with the creature." }
+    ],
+    "contrast-metric": {
+      "definition": "WCAG 2.x relative luminance: linearize each sRGB channel (c<=0.04045 ? c/12.92 : ((c+0.055)/1.055)^2.4), take L = 0.2126R + 0.7152G + 0.0722B, then ratio = (L_lighter + 0.05) / (L_darker + 0.05).",
+      "thresholds": { "AAA-normal": 7.0, "AA-normal": 4.5, "AA-large": 3.0, "AA-non-text": 3.0 },
+      "corrected": "2026-10-02. All five ratios were previously wrong by 1.3x-1.5x, computed on an unstated and incorrect metric. Every verdict happened to survive, but two of them for the wrong reason: --ui-text-secondary on --ui-surface was recorded as 3.62 (clearly large-text-only) when the true 4.21 is much closer to the 4.5 normal-text line, and --ui-active on --ui-shell as 1.34 when it is 1.91. Recompute with Tools/verify-art-metrics.py; do not hand-edit these numbers."
+    }
+  },
+  "state-variants": [
+    { "state": "Idle Ambient", "key-intensity": 1.0, "rim": "x1.00 full two-tone", "env-value-rungs": 0, "env-hsv-s": 33.2, "notes": "BASELINE. Every other state is a named delta from here." },
+    { "state": "First Open / Greeting", "key-intensity": 1.25, "rim": "x1.00", "env-value-rungs": 1, "env-hsv-s": 33.2, "notes": "Absolute brightness +2 steps on entry, flooding -2 steps over 1.2s. Intensity scales with absence length." },
+    { "state": "Painting", "key-intensity": 0.85, "rim": "warm-only, mint removed, x1.15", "env-value-rungs": -1, "env-hsv-s": 24.9, "notes": "Environment HSV S x0.75. Wet strokes HSL L x1.18 + emissive, settling to x1.00 over 0.6s." },
+    { "state": "Signature Mark Flourish", "key-intensity": 1.1, "rim": "x2.00", "env-value-rungs": -2, "env-hsv-s": 33.2, "notes": "Key azimuth +15 deg, elevation 62 deg. Mark point light tinted to the mark's own tier-0 hue. 0.15s light-source inversion. Only state reaching 3.5:1." },
+    { "state": "Minigame", "key-intensity": 0.95, "rim": "0.15 whisper", "env-value-rungs": 1, "env-hsv-s": 33.2, "notes": "Key azimuth 15 deg, elevation 60 deg. Environment depth-blurred. Success is a fixed 12-spoke radial, never re-tinted." },
+    { "state": "Results / Reward", "key-intensity": 1.0, "rim": "x1.00", "env-value-rungs": 0, "env-hsv-s": 33.2, "notes": "Radial warm sunburst. Centred symmetrical composition. Rewards grow in at 1.4x with overshoot." },
+    { "state": "Menus", "key-intensity": 0.9, "rim": "x1.00", "env-value-rungs": -1, "env-hsv-s": 26.6, "notes": "Environment value x0.85, HSV S x0.80. Horizon band present - the only state where it appears. NEVER greyed, dimmed." }
+  ],
+  "state-invariants": [
+    "No state exceeds 3.5:1 value ratio.",
+    "No surface falls below L3 (luma 41.6%).",
+    "No environment surface exceeds 40.0% HSV S.",
+    "Warm only - no cold light term is ever introduced by a state.",
+    "Mint Halo is never re-tinted, only re-scaled.",
+    "Every state transition animates over >= 0.4s."
+  ],
+  "build-time-checks": [
+    { "id": 1, "check": "coat HSV S", "threshold": "<= 25.0%", "failure": "coat too saturated - child loses budget" },
+    { "id": 2, "check": "environment HSV S", "threshold": "<= 42.0%", "failure": "environment competing with paint" },
+    { "id": 3, "check": "any non-tier-0 pixel HSV S", "threshold": "<= 40.0%", "failure": "saturation budget breach" },
+    { "id": 4, "check": "tier-0 swatch HSV S", "threshold": "authored +/- 0.5%", "failure": "wrong colour" },
+    { "id": 5, "check": "minimum hue separation, whole tier-0 set", "threshold": ">= 12.0 deg OR >= 15.0% luma delta", "failure": "CVD adjacency risk", "note": "Value channel added 2026-10-01: Petal/Cranberry are 5.5 deg apart but 31.6% apart in luma. Hue alone is not the only separator the palette may rely on; 15.0% is well clear of the 5.0% colour-weak band, below which value may not carry meaning." },
+    { "id": 6, "check": "adjacent-swatch delta-hue OR delta-luma", "threshold": ">= 25.0 deg OR >= 5.0%", "failure": "two swatches merge under CVD" },
+    { "id": 7, "check": "any surface below the luminance floor", "threshold": ">= 25.0% of base", "failure": "shadow reads as damage" },
+    { "id": 8, "check": "any state above the ratio ceiling", "threshold": "<= 3.5:1", "failure": "state becomes visually graded" }
+  ]
+}

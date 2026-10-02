@@ -1,0 +1,95 @@
+﻿# Architecture Registry
+
+State ownership, interface contracts, and forbidden patterns established by
+Accepted ADRs. Check this before authoring a new ADR — an ADR that contradicts a
+registered stance must either align or explicitly supersede it.
+
+Populated automatically from docs/architecture/adr-*.md.
+
+---
+
+## state_ownership
+
+  # None yet.
+
+## interfaces
+
+  touch_input:
+    status: proposed
+    adr: ADR-0001
+    owner: FluidTouchInputManager (Dab.Runtime.Input)
+    contract: >
+      TouchBegan(Vector2), TouchMoved(Vector2), TouchEnded(Vector2, bool),
+      Tapped(Vector2), DragCompleted(List<Vector2>).
+      Tapped is a distinct event from TouchEnded — consumers needing only intent
+      must subscribe to Tapped and must not re-derive tap state from stroke data.
+
+## forbidden_patterns
+
+  legacy_input_manager_api:
+    status: proposed
+    adr: ADR-0001
+    description: >
+      UnityEngine.Input.* usage. Deprecated in Unity 6.3; logs warnings when set
+      as active input handler. Project is new-Input-System-only.
+  raw_touchscreen_polling:
+    status: proposed
+    adr: ADR-0001
+    description: >
+      Polling Touchscreen.current.touches inside Update. Misses touch state
+      changes, including sub-frame taps — the most common case for this age band.
+      Use EnhancedTouch.Touch.activeTouches.
+  lazy_enhanced_touch_enable:
+    status: proposed
+    adr: ADR-0001
+    description: >
+      Enabling EnhancedTouchSupport on first touch. EnhancedTouch records history
+      as touches occur; enabling mid-gesture loses the in-progress gesture.
+  disabling_enhanced_touch_on_pause:
+    status: proposed
+    adr: ADR-0001
+    description: >
+      Calling EnhancedTouchSupport.Disable() in OnDisable. Fires on app
+      backgrounding; discards recorded history and re-enables mid-gesture on
+      resume, producing phantom or dropped touches.
+  pixel_space_input_thresholds:
+    status: proposed
+    adr: ADR-0001
+    description: >
+      Authoring drag dead zone, sample spacing, or edge inset in pixels.
+      Normalize to inches via Screen.dpi so forgiveness is device-independent.
+  tap_as_degenerate_drag:
+    status: proposed
+    adr: ADR-0001
+    description: >
+      Modelling tap as "a drag that stayed in the dead zone." Violates the
+      equal-status tap/drag guarantee (AGENTS.md 2.4) and makes each consumer
+      re-derive the distinction.
+
+## api_decisions
+
+  touch_enhancement:
+    status: proposed
+    adr: ADR-0001
+    choice: EnhancedTouch, enabled at OnEnable, never disabled
+    rejects: >
+      Input Actions with Interaction assets (cannot express inch-normalized
+      thresholds); raw Touchscreen polling (drops sub-frame taps); separate
+      Tap/Stroke components (competing primary-touch ownership);
+      third-party gesture libraries (violates zero-third-party-SDK constraint).
+  input_threshold_units:
+    status: proposed
+    adr: ADR-0001
+    choice: inches, converted to pixels via Screen.dpi at use
+  touch_gesture_events:
+    status: proposed
+    adr: ADR-0001
+    choice: five C# events; Tapped distinct from TouchEnded and DragCompleted
+
+## performance_budgets
+
+  touch_input:
+    status: proposed
+    adr: ADR-0001
+    budget: zero bytes allocated per frame during a continuous stroke (600-frame criterion)
+    note: Revisit polling-vs-Finger-callbacks if profiling shows input cost matters.

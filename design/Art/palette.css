@@ -1,0 +1,180 @@
+/* ==========================================================================
+   Dab (working title) — Color Palette
+   Generated: 2026-09-30
+   Art bible:  design/art/art-bible.md
+   Machine source: design/art/palette.json
+
+   METRICS — do not confuse them:
+     luma  = Rec.709 gamma-encoded, 0.2126R+0.7152G+0.0722B  (greyscale test)
+     sat   = HSV (max-min)/max                                  (budget gate)
+     hue   = HSL hue, degrees
+   The saturation budget is denominated in HSV, NOT HSL. See art-bible §4.0.
+
+   INVARIANTS:
+     - No state, tool, or result is distinguishable by hue alone.
+     - 40% HSV S wall. Exceeded ONLY by tier-0 paints and by the Cocoa ink
+      family (L0-L3: stroke, print mask, UI text), whose ceiling is 48.2%. That
+      family is thin line art, never a painted surface.
+     - Coat <= 25% HSV S (+/-2). Environment <= 40% HSV S (+/-2).
+     - No diffuse surface below luma 25%. L0/L1 are stroke-only.
+     - No state above 3.5:1 value ratio.
+   ========================================================================== */
+
+:root {
+  /* ---------- Primary Palette ------------------------------------------------
+     5 surfaces + 2 light terms. Light terms must NEVER appear on a surface. */
+  --color-primary:            #F7E9D2;  /* Dawn Cream    rgb(247,233,210) h 37.30  sat 15.0% luma 91.9% */
+  --color-secondary:          #E8C79B;  /* Honey Field   rgb(232,199,155) h 34.29  sat 33.2% luma 79.5% */
+  --color-tertiary:           #F6B9A0;  /* Peach Shadow  rgb(246,185,160) h 17.44  sat 35.0% luma 76.9% */
+  --color-ink:                #4A382A;  /* Cocoa Ink     rgb( 74, 56, 42) h 26.25  sat 43.2% luma 23.1% */
+
+  /* Light terms — emissive/glow only, never a diffuse surface */
+  --color-light-key:          #FFE3B8;  /* Sunlight Amber rgb(255,227,184) h 36.34 sat 27.8% luma 90.1% */
+  --color-light-rim-upper:    #FFB0D0;  /* Rim Rose      rgb(255,176,208) h335.70 sat 31.0% luma 76.5% */
+  --color-light-rim-base:     #BFF3E2;  /* Mint Halo     rgb(191,243,226) h160.38 sat 21.4% luma 90.5% */
+
+  /* ---------- Value Ladder L0–L8 -------------------------------------------
+     "One value step" = one rung. State rules use rungs, never percentages.
+     Machine constant for one step: HSL L x 0.85 (deliberately conservative —
+     the local rung ratio in L4–L6 is ~x0.84, which is MORE contrast than one
+     rung on light values; since 3.5:1 is a MAXIMUM, dim less, not more). */
+  --value-l0:                 #33251B;  /* Deep Cocoa  luma 15.4%  stroke/line only */
+  --value-l1:                 #4A382A;  /* Cocoa Ink   luma 23.1%  stroke only, NO diffuse surface */
+  --value-l2:                 #6B4F3A;  /* Cocoa       luma 32.7%  mask mid-dark, deep UI text */
+  --value-l3:                 #876546;  /* Umber       luma 41.6%  DARKEST value any shadow may reach */
+  --value-l4:                 #A98C6B;  /* Tan         luma 56.4%  mask light-mid, UI body text */
+  --value-l5:                 #C0A584;  /* Sand        luma 66.0%  lightest mask permitted (P1) */
+  --value-l6:                 #E8C79B;  /* Honey Field luma 79.5%  environment rung */
+  --value-l7:                 #F7E9D2;  /* Dawn Cream  luma 91.9%  surface rung */
+  --value-l8:                 #FFFBF4;  /* Highlight   luma 98.6%  SPECULAR/ADDITIVE ONLY */
+
+  --value-step-constant:      0.85;
+
+  /* ---------- Print Mask Family ---------------------------------------------
+     One hue family (H 25.00–33.00, spread 8.0°), seven values, ONE material,
+     ONE texture slot, ZERO shader variants. Because hue is constant across all
+     nine print classes, color vision deficiency cannot affect separability. */
+  --mask-m0:                  #33251B;  /* Deep Cocoa  luma 15.4% */
+  --mask-m1:                  #4A382A;  /* Cocoa Ink   luma 23.1% */
+  --mask-m2:                  #6B4F3A;  /* Cocoa       luma 32.7% */
+  --mask-m3:                  #876546;  /* Umber       luma 41.6% */
+  --mask-m4:                  #A98C6B;  /* Tan         luma 56.4% */
+  --mask-m5:                  #C0A584;  /* Sand        luma 66.0% — lightest permitted, P1 = 25.9% over coat */
+  --mask-hue-min:             25.00;
+  --mask-hue-max:             33.00;
+
+  /* ---------- Semantic Colour Vocabulary -------------------------------------
+     Every token below MUST be paired with a non-color channel. A token used
+     without its redundant channel is a defect. See art-bible §4.2. */
+  --sem-unauthored:           #F7E9D2;  /* + value: highest rung L7 */
+  --sem-world-calm:           #E8C79B;  /* + position (lower third) + pattern (untextured) */
+  --sem-attention:            #FFE3B8;  /* + motion + additive luma >= 8%
+                                            DECLARED NON-INFORMATIONAL vs Dawn Cream.
+                                            May NOT mark a boundary, target, or hit area. */
+  --sem-not-wrong:            #F6B9A0;  /* + value + softness. The only legal shadow colour. */
+  --sem-alive:                #FFB0D0;  /* + position (upper 55% of silhouette edge).
+                                            NEVER colour alone — only 14.0% luma from Mint Halo. */
+  --sem-grounded:             #BFF3E2;  /* + position (lower 45% of silhouette edge) + stillness */
+  --sem-authored-line:        #4A382A;  /* + shape (>= 8px stroke, rounded caps) */
+  --sem-focus:                #4A382A;  /* + shape (4px ring at >= 4.12:1) */
+
+  /* Minigame success deliberately has NO colour token. It inherits the child's
+     own paint hue and is carried by a FIXED 12-spoke radial pattern plus body
+     squash 82% -> stretch 112%. Identical in greyscale every time. */
+
+  /* ---------- Refused Semantics ---------------------------------------------
+     These colour meanings DO NOT EXIST in this product. Listed so nobody
+     reintroduces them by muscle memory. */
+  --refused-red-as-error:     none;     /* red = authorship only (tier-0 paint) */
+  --refused-gold-as-currency: none;     /* gold = warmth/attention only */
+  --refused-grey-as-disabled: none;     /* grey has NO meaning here at all */
+  --refused-blue-as-cold:     none;     /* blue = authorship only */
+  --refused-green-as-success: none;     /* success = shape + motion + fixed radial */
+  --refused-black-as-premium: none;     /* Cocoa Ink is a drawing colour, not a surface */
+  --refused-dark-as-punish:   none;     /* darkening = "light ended here", never "you did badly" */
+  --refused-sat-as-quality:   none;     /* never grade the child's work by colour */
+
+  /* ---------- Tier-0 Paint Palette -------------------------------------------
+     The only colours allowed above 40% HSV S, because the child made them.
+     Layout is 3 columns x 4 rows, row-major. THIS ORDER IS LOAD-BEARING: it is
+     the order the adjacency rule (dHue >= 25 OR dLuma >= 5) was solved against.
+     R1C1..R1C3 = row 1, etc. */
+  --paint-cherry-pop:         #E42C48;  /* R1C1 h350.9 sat 80.7% luma 33.4% — default first pick */
+  --paint-splash:             #3FC4E0;  /* R1C2 h190.4 sat 71.9% luma 66.6% */
+  --paint-sunbeam:            #F5D33C;  /* R1C3 h 49.0 sat 75.5% luma 81.3% — highest-luma paint */
+  --paint-bluebell:           #4A7FE0;  /* R2C1 h218.8 sat 67.0% luma 48.1% */
+  --paint-tangerine:          #F28A2E;  /* R2C2 h 28.2 sat 81.0% luma 60.2% */
+  --paint-leaf:               #4FA83C;  /* R2C3 h109.4 sat 64.3% luma 55.4% */
+  --paint-violet-pop:         #8B4FD6;  /* R3C1 h266.7 sat 63.1% luma 39.8% — 3rd darkest; relief req. */
+  --paint-grass-pop:          #6FBF3F;  /* R3C2 h 97.5 sat 67.0% luma 64.6% */
+  --paint-petal:              #E87FB0;  /* R3C3 h332.0 sat 45.3% luma 59.9% — tightest hue adjacency vs Cranberry (5.5 deg / 31.6% luma, so value-separated°/38.9%) */
+  --paint-splash-mint:        #3FC8A0;  /* R4C1 h162.5 sat 68.5% luma 65.9%
+                                            DO NOT confuse with --color-light-rim-base. Distinct by 47.1% sat and 24.6% luma. */
+  --paint-indigo-pop:         #5B5BE0;  /* R4C2 h240.0 sat 59.4% luma 39.5% */
+  --paint-cranberry:          #C4215E;  /* R4C3 h337.5 sat 83.2% luma 28.3% — LOWEST luma; relief req. */
+
+  --paint-min-hue-separation: 5.5;     /* degrees, whole tier-0 set (Petal/Cranberry). Build check accepts >= 12 deg
+                                                OR >= 15% luma delta; this pair is 5.5 deg but
+                                                31.6% luma, so it passes on value. */
+
+  /* ---------- UI Palette ------------------------------------------------------
+     Diverges from the world palette in exactly TWO ways:
+       1. Page ground is one rung dimmer (Honey Field L6 -> Warm Shell), so a
+          held panel sits BELOW the world it floats over and never competes with
+          the creature.
+       2. No divergence at all on the active surface — active is the same paper as
+          the world's brightest surface.
+     Everything else is identical to the world palette. NO UI colour exists that
+     is not in the world palette. */
+  --color-ui-shell:           #BEA88B;  /* page ground, menu dim     luma 66.9% sat 26.8% */
+  --color-ui-surface:         #DABE98;  /* card, panel, palette tray  luma 75.8% sat 30.3% */
+  --color-ui-raised:          #E8D5B8;  /* raised card, tooltip       luma 84.3% sat 20.7% */
+  --color-ui-active:          #F7E9D2;  /* active control             luma 91.9% sat 15.0% */
+  --color-ui-text:            #4A382A;  /* all body/label text        luma 23.1% sat 43.2% — 6.24:1 on active */
+  --color-ui-text-secondary:  #6B4F3A;  /* supporting caption          luma 32.7% sat 45.8% — 3.62:1 on surface */
+  --color-ui-stroke:          #4A382A;  /* icon strokes, outlines      8px min, rounded caps */
+  --color-ui-keyline:         #F7E9D2;  /* 4px border on every swatch face */
+  --color-ui-focus:           #4A382A;  /* focus ring OUTER, 4px, >= 4.12:1 */
+  --color-ui-focus-inner:     #FFE3B8;  /* focus ring inner 2px ONLY — carries NOTHING, per C2 */
+  --color-ui-unavailable:     #DABE98;  /* 88% size + 1 rung down. NO hue change at all. */
+
+  /* ---------- State Colour Variants -------------------------------------------
+     Machine-applicable. "value" is in ladder rungs from Idle Ambient. */
+  --state-ambient:            #F7E9D2;  /* BASELINE. key x1.00, rim full two-tone, env sat 33.2% */
+  --state-greeting:           #F7E9D2;  /* key x1.25, +2 rungs on entry flooding -2 over 1.2s, env sat 33.2% */
+  --state-painting:           #E8C79B;  /* key x0.85, rim warm-only x1.15 (mint removed),
+                                             env -1 rung, env sat x0.75 -> 24.9% */
+  --state-flourish:           #FFE3B8;  /* key x1.10 az+15 el62, rim x2.00, env -2 rungs,
+                                             mark light tinted to the mark's OWN tier-0 hue.
+                                             Only state reaching 3.5:1. */
+  --state-minigame:           #F7E9D2;  /* key x0.95 az15 el60, rim 0.15 whisper, env blurred, sat 33.2% */
+  --state-results:            #E8C79B;  /* key x1.00, radial warm sunburst, centred symmetrical, sat 33.2% */
+  --state-menus:              #DABE98;  /* key x0.90, env value x0.85, env sat x0.80 -> 26.6%.
+                                             Horizon band present (only state). NEVER greyed. */
+
+  /* ---------- Accessibility Thresholds ---------------------------------------- */
+  --sat-wall:                 40.0;     /* % HSV. Only tier-0 may exceed. */
+  --sat-coat-cap:             25.0;     /* % HSV, creature base coat */
+  --sat-environment-cap:      40.0;     /* % HSV */
+  --sat-tier0-tolerance:      0.5;      /* % HSV, authored values are exact */
+  --sat-surface-tolerance:    2.0;      /* % HSV absolute */
+  --luma-floor-percent:       25.0;     /* % of base — no diffuse surface below this */
+  --luma-darkest-shadow:      41.6;     /* % — L3 Umber */
+  --ratio-ceiling:            3.5;      /* :1 maximum in any state */
+  --collapse-independent:     16.0;     /* % luma delta */
+  --collapse-weak:            5.0;      /* % luma delta */
+  --collapse-void:            2.0;      /* % luma delta */
+  --min-hue-separation:       12.0;     /* deg, check 5 hue channel, tier-0 */
+  --min-hue-sep-luma-alt:      15.0;     /* % luma, check 5 VALUE channel. A pair may clear
+                                              check 5 on hue OR on this. Well above
+                                              --collapse-weak (5.0), below which value may
+                                              not carry meaning on its own. */     /* deg, build check for tier-0 */
+  --adjacency-dhue:           25.0;     /* deg, adjacent swatch */
+  --adjacency-dluma:          5.0;      /* % luma, adjacent swatch */
+  --mask-min-contrast:        25.0;     /* % luma, mask-to-coat (P1) */
+  --mask-min-gap:             5.0;      /* % luma, class-to-class (P2) */
+  --mask-6bit-floor:          1.6;      /* % luma, quantisation step (P3) */
+  --relief-min:               0.02;     /* H — painted-mark relief, shader requirement (C4) */
+  --relief-max:               0.04;     /* H */
+  --min-feature:              0.08;     /* H — survives 64px render as 5.1px */
+}
