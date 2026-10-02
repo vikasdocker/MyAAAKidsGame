@@ -1042,7 +1042,7 @@ clears hue instead. No adjacency fails on both channels.
 | # | Check | Threshold | Failure means |
 |---|---|---|---|
 | **1** | Coat HSV S | ≤ **25.0%** (+/-2.0 tol) | Coat too saturated — child loses budget |
-| **2** | Environment HSV S | ≤ **42.0%** (40.0 + 2.0 tol) | Environment competing with paint |
+| **2** | Environment HSV S | ≤ **40.0%** | Environment competing with paint |
 | **3** | Any non-Tier-0 pixel HSV S | ≤ **40.0%** | §1.4 Principle 1 breach |
 | **4** | Tier-0 swatch HSV S | authored ± **0.5%** | Wrong colour |
 | **5** | Minimum hue separation, whole Tier-0 set | ≥ **12.0°** OR ≥ **15.0% luma** | CVD adjacency risk |
@@ -1240,7 +1240,7 @@ and each does so on a non-colour channel:
 **Budget:**
 
 - [ ] Coat HSV S ≤ **25.0%** (+/-2.0 tolerance)
-- [ ] Environment HSV S ≤ **42.0%** (40.0 + tolerance)
+- [ ] Environment HSV S ≤ **40.0%** (the wall is absolute; see below)
 - [ ] Top-five most saturated pixels in any frame are **all** Tier-0 paint
 - [ ] No non-Tier-0 pixel exceeds **40.0%** HSV S
 - [ ] No new colour exists that is not derived from coat, mask family, or Tier-0
@@ -3310,20 +3310,21 @@ it, and not one point further.
 
 | State | Ground / props | Sky horizon | Contact occlusion | **World's peak HSV S in frame** | §4.4.5 build check |
 |---|---|---|---|---|---|
-| **Idle Ambient** *(baseline)* | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 42.0% — PASS |
-| **First Open / Greeting** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 42.0% — PASS |
-| **Painting** | **24.9%** (×0.75) | **28.0%** (×0.75) | **26.3%** (×0.75) | **28.0%** | ≤ 42.0% — PASS |
-| **Signature Mark Flourish** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 42.0% — PASS |
-| **Minigame** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 42.0% — PASS |
-| **Results / Reward** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 42.0% — PASS |
-| **Menus** | **26.6%** (×0.80) | **29.8%** (×0.80) | **28.0%** (×0.80) | **29.8%** | ≤ 42.0% — PASS |
+| **Idle Ambient** *(baseline)* | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 40.0% — PASS |
+| **First Open / Greeting** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 40.0% — PASS |
+| **Painting** | **24.9%** (×0.75) | **28.0%** (×0.75) | **26.3%** (×0.75) | **28.0%** | ≤ 40.0% — PASS |
+| **Signature Mark Flourish** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 40.0% — PASS |
+| **Minigame** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 40.0% — PASS |
+| **Results / Reward** | 33.2% | 37.3% | 35.0% | **37.3%** | ≤ 40.0% — PASS |
+| **Menus** | **26.6%** (×0.80) | **29.8%** (×0.80) | **28.0%** (×0.80) | **29.8%** | ≤ 40.0% — PASS |
 
 | | Value |
 |---|---|
-| **Absolute world ceiling** | **40.0% HSV S ± 2.0** (§4.4.2 Tier-3) |
-| **Build-check threshold** | **≤ 42.0%** (§4.4.5 check 2) |
+| **Absolute world ceiling** | **40.0% HSV S** (§4.4.2 Tier-3) — absolute, no tolerance |
+| **Build-check threshold** | **≤ 40.0%** (§4.4.5 check 2) — same number, now that it states the ceiling rather than ceiling + tolerance |
+| **Measurement slack** | **± 2.0%** applies only to *sampling* a pixel, never to the ceiling itself |
 | **Highest value the world ever reaches** | **37.3%** — sky horizon, Ambient |
-| **Headroom** | **2.7 points** to the wall, **4.7** to the build-check threshold |
+| **Headroom** | **2.7 points** to the wall |
 | **Result** | The world **cannot** breach the saturation wall in any state, at any lighting value, because its peak is a *fixed authored colour* and the world's two modulating states modulate **down** in both cases |
 
 **The consequence for the frame.** `game-concept.md` §7 requires *"accent: saturated

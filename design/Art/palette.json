@@ -276,9 +276,9 @@
     "Every state transition animates over >= 0.4s."
   ],
   "build-time-checks": [
-    { "id": 1, "check": "coat HSV S", "threshold": "<= 25.0%", "failure": "coat too saturated - child loses budget" },
-    { "id": 2, "check": "environment HSV S", "threshold": "<= 42.0%", "failure": "environment competing with paint" },
-    { "id": 3, "check": "any non-tier-0 pixel HSV S", "threshold": "<= 40.0%", "failure": "saturation budget breach" },
+    { "id": 1, "check": "coat HSV S", "threshold": "<= 25.0%", "ceiling-source": "saturation-budget.tiers[tier=1].hsv-s-ceiling", "tolerance-percent": 2.0, "failure": "coat too saturated - child loses budget" },
+    { "id": 2, "check": "environment HSV S", "threshold": "<= 40.0%", "ceiling-source": "saturation-budget.tiers[tier=3].hsv-s-ceiling", "tolerance-percent": 2.0, "failure": "environment competing with paint", "note": "Every threshold in this table states the DESIGN CEILING, never a tolerance-inclusive gate. This stated 42.0% until 2026-10-02, which contradicted check 3 and the absolute 40.0% wall: an environment surface IS a non-tier-0 pixel, so check 3 already capped it at 40.0% with no tolerance, and 42.0% here could never be the binding constraint. tolerance-percent is the measurement slack the build script adds when sampling a pixel, and it never raises the ceiling. Corrected to 40.0%; the authored world peak is 37.3%, so no authored asset moves." },
+    { "id": 3, "check": "any non-tier-0 pixel HSV S", "threshold": "<= 40.0%", "ceiling-source": "invariants.saturation-wall", "tolerance-percent": 0.0, "failure": "saturation budget breach" },
     { "id": 4, "check": "tier-0 swatch HSV S", "threshold": "authored +/- 0.5%", "failure": "wrong colour" },
     { "id": 5, "check": "minimum hue separation, whole tier-0 set", "threshold": ">= 12.0 deg OR >= 15.0% luma delta", "failure": "CVD adjacency risk", "note": "Value channel added 2026-10-01: Petal/Cranberry are 5.5 deg apart but 31.6% apart in luma. Hue alone is not the only separator the palette may rely on; 15.0% is well clear of the 5.0% colour-weak band, below which value may not carry meaning." },
     { "id": 6, "check": "adjacent-swatch delta-hue OR delta-luma", "threshold": ">= 25.0 deg OR >= 5.0%", "failure": "two swatches merge under CVD" },

@@ -35,6 +35,17 @@ import re
 import sys
 from pathlib import Path
 
+# Failure messages quote the spec verbatim, and the specs use real typography
+# (≤, °, ±). On a Windows console the default cp1252 codec cannot encode those
+# and the report crashes with UnicodeEncodeError *while printing a failure*,
+# hiding the actual mismatch. Force UTF-8 and never fail on a console that
+# cannot render it.
+for _stream in ("stdout", "stderr"):
+    try:
+        getattr(sys, _stream).reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError, OSError):
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 ART = ROOT / "design" / "Art"
 
@@ -530,6 +541,85 @@ def verify_palette(palette: dict) -> None:
         check("invariants.coat-cap tolerance matches saturation-budget.tolerance",
               tol, float(coat_tol.group(1)), tol=0.005)
 
+    # build-time-checks is the table an artist or a build script reads to learn
+    # what fails a build. It stated "<= 42.0%" for the environment while every
+    # other surface check stated its bare ceiling, and 42.0 is ceiling + the
+    # declared 2.0 tolerance. Two things were wrong with that:
+    #
+    #   1. It contradicted check 3 in the same table. An environment surface IS
+    #      a non-tier-0 pixel, so check 3 already capped it at 40.0% with no
+    #      tolerance. A looser 42.0% row could never be the binding constraint.
+    #   2. It contradicted the wall itself, which the bible calls absolute.
+    #
+    # Nothing gated this table, so both facts drifted unnoticed. Bind every
+    # threshold to the ceiling it names, and forbid a surface threshold from
+    # exceeding the wall its own ceiling-source points at.
+    checks_by_id = {c["id"]: c for c in palette["build-time-checks"]}
+    wall = ceiling.get(3)
+
+    for cid in (1, 2, 3):
+        row = checks_by_id.get(cid)
+        check_bool(f"build-time-checks has row id {cid}", row is not None,
+                   "row is missing from the table")
+        if row is None:
+            continue
+
+        stated = re.search(r"<=\s*([\d]+(?:\.\d+)?)\s*%", row.get("threshold", ""))
+        check_bool(f"build-time-checks[{cid}] states a '<= N%' threshold",
+                   stated is not None,
+                   f"could not read a ceiling from {row.get('threshold')!r}")
+        if stated is None:
+            continue
+
+        # A ceiling must not smuggle a tolerance in behind the number, in
+        # either "<= 40.0% +/- 2.0" or "<= 40.0% + 2.0" form. Reading only the
+        # leading number would pass both while the row still lets a pixel sit
+        # above the wall.
+        tail = row.get("threshold", "")[stated.end():]
+        smuggled = re.match(r"\s*(?:\+/-|\+|-|±)\s*[\d.]", tail)
+        check_bool(f"build-time-checks[{cid}] states a bare ceiling, not ceiling +/- slack",
+                   smuggled is None,
+                   f"threshold {row.get('threshold')!r} appends a tolerance to the "
+                   f"ceiling; tolerance-percent is the field for that")
+
+        # The stated number must equal the ceiling this row's own
+        # ceiling-source names. Comparing every row to the environment wall
+        # would be wrong: check 1 is the coat cap at 25.0%, which is a
+        # different tier and legitimately lower.
+        src = row.get("ceiling-source", "")
+        # The source is written "saturation-budget.tiers[tier=3].hsv-s-ceiling",
+        # so match the equals form, not the bracket form.
+        m = re.search(r"tier\s*=\s*(\d+)", src)
+        if m:
+            tier_ceiling = ceiling.get(int(m.group(1)))
+            if tier_ceiling is not None:
+                check(f"build-time-checks[{cid}] states its ceiling-source "
+                      f"({tier_ceiling}%), not ceiling + tolerance",
+                      tier_ceiling, float(stated.group(1)), tol=0.05)
+        elif "saturation-wall" in src:
+            # Check 3 quotes the wall directly rather than a tier.
+            if wall is not None:
+                check("build-time-checks[3] states the saturation wall",
+                      wall, float(stated.group(1)), tol=0.05)
+        else:
+            # No ceiling-source means nothing says what this row is quoting,
+            # so it can silently drift away from the tiers. That is the bug
+            # that let 42.0% sit here unnoticed.
+            check_bool(f"build-time-checks[{cid}] declares a ceiling-source",
+                       False,
+                       f"no ceiling-source on row {cid}; cannot tell what it quotes")
+
+    # tolerance-percent is measurement slack for sampling a pixel. It is
+    # recorded here so the table is honest about it, but it must never be
+    # folded into the threshold.
+    for cid in (1, 2, 3):
+        row = checks_by_id.get(cid) or {}
+        if "tolerance-percent" in row:
+            t = row["tolerance-percent"]
+            check_bool(f"build-time-checks[{cid}] tolerance-percent is a number",
+                       isinstance(t, (int, float)) and t >= 0,
+                       f"got {t!r}")
+
     # The value ladder is deliberately NOT geometric, so 0.85 cannot be checked
     # against every rung. It is a LOCAL claim about the band the JSON names, so
     # check exactly that band and nothing more.
@@ -889,6 +979,64 @@ def verify_art_bible(md: str, palette: dict, typo: dict) -> None:
     ladder = " / ".join(str(s) for s in sizes)
     check_bool(f"art bible states the ladder as {ladder}", ladder in md,
                f"expected the exact ladder string {ladder!r} in the bible")
+
+    # --- the environment saturation gate, restated in the bible.
+    # The bible mirrored the JSON's bad 42.0% in three places: the 4.4.5 build
+    # check row, the 4.4.6 checklist, and all seven rows of the 6.5.2 state
+    # table. Hold every one of them to the JSON's stated ceiling, and prove
+    # the stale gate is gone rather than just absent from one table.
+    env_row = next((c for c in palette["build-time-checks"]
+                    if c["id"] == 2), None)
+    if env_row is not None:
+        env_stated = re.search(r"<=\s*([\d]+(?:\.\d+)?)\s*%",
+                               env_row.get("threshold", ""))
+        if env_stated:
+            num = env_stated.group(1)
+
+            # The 6.5.2 state table stamps every row with the gate it passed.
+            # Scope the search to that table: elsewhere in a 6000-line bible
+            # "≤ **N%**" also cites contrast ratios and saturation floors, which
+            # have nothing to do with the environment gate.
+            sec = md.split("#### 6.5.2")
+            check_bool("art bible has a 6.5.2 world-saturation section",
+                       len(sec) > 1, "could not find section 6.5.2")
+            if len(sec) > 1:
+                # End at the next heading of the same or higher level. Splitting
+                # on a bare "\n#" would also cut at the first "#" inside the
+                # table's own cell text and truncate the table away.
+                table = re.split(r"\n#{1,4} ", sec[1], maxsplit=1)[0]
+                # The state table writes the gate unbolded ("≤ 40.0% — PASS")
+                # while 4.4.5 bolds it ("≤ **40.0%**"). Accept either.
+                passes = re.findall(r"≤\s*\**\s*([\d.]+)%", table)
+                check_bool("art bible 6.5.2 state table has rows to verify",
+                           bool(passes),
+                           "found no '≤ **N%**' gate citations in 6.5.2")
+                for got in set(passes):
+                    check("art bible 6.5.2 state rows cite the JSON's environment gate",
+                          float(num), float(got), tol=0.05)
+
+            # The 4.4.5 build-check row must agree with the JSON too.
+            row45 = re.search(
+                r"\|\s*\*\*2\*\*\s*\|\s*Environment HSV S\s*\|\s*(≤[^|]*?)\s*\|",
+                md)
+            check_bool("art bible 4.4.5 has an environment HSV S row", row45 is not None,
+                       "could not find the check-2 row in 4.4.5")
+            if row45:
+                cited = re.search(r"≤\s*\*\*([\d.]+)%\*\*", row45.group(1))
+                check_bool("art bible 4.4.5 environment row quotes a percentage",
+                           cited is not None,
+                           f"4.4.5 says {row45.group(1)!r}")
+                if cited:
+                    check("art bible 4.4.5 environment row matches the JSON threshold",
+                          float(num), float(cited.group(1)), tol=0.05)
+
+            # The stale tolerance-inclusive gate must be gone. The hue band is
+            # legitimately 17-42 degrees, so only flag 42.0 quoted as a
+            # saturation percentage.
+            stale = re.findall(r"≤\s*\*\*42\.0%\*\*", md)
+            check_bool("art bible no longer cites a 42.0% saturation gate",
+                       not stale,
+                       f"found {len(stale)} stale '≤ 42.0%' saturation gate(s)")
 
     steps = typo["scale"]["step-ratios"]
     stated = "1.25 / 1.40 / 1.3333 / 1.2857 / 1.3333"
