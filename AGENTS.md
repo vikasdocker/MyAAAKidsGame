@@ -284,3 +284,42 @@ before play mode starts and reports success regardless. PlayMode test runs and
 6. Visual reference games — not supplied. **Blocking art bible quality.**
 7. Accessibility vs. the "no grey / high saturation" rule — needs explicit
    resolution, especially colorblind palettes.
+
+---
+
+## 11. Project Knowledge — Dify RAG
+
+This repo has a persistent knowledge index so agents keep context across model
+and provider changes. **Git stays the source of truth**; Dify only stores a
+retrieval index of curated documents.
+
+**Index:** knowledge base `MyAAAKidsGame Project Knowledge` on the local Dify
+instance (`http://localhost`), high-quality indexing, 15 documents from
+`docs/`. Credentials live in `.env` (gitignored — copy `.env.example`).
+
+```bash
+# Recover context in a fresh session
+python scripts/rag_query.py "What is the current state of the game?"
+python scripts/rag_query.py "What systems are incomplete or missing?"
+python scripts/rag_query.py "What are the non-negotiable design constraints?"
+python scripts/rag_query.py "What is the highest priority next task?"
+
+# After editing anything under docs/
+python scripts/rag_sync.py --only docs/project/CURRENT_STATE.md
+```
+
+**Retrieval is raw chunk search with no LLM** — cheap and model-independent,
+but it can be stale. Therefore:
+
+1. **Cross-check every retrieved claim against the code before acting on it.**
+   Chunks cite their source document; open it, then grep the code for anything
+   about what exists or works.
+2. **For status questions, `docs/project/CURRENT_STATE.md` + the code beat this
+   file's §9 table**, which is known-stale (it still says the art bible and ADRs
+   do not exist). §2 and §3 above — the constraints and pillars — remain
+   non-negotiable.
+3. **Never index source code, the 468 KB art bible, or secrets.** Summaries only.
+4. **Record doc/code mismatches** in `docs/project/CURRENT_STATE.md` →
+   "Known doc drift" rather than silently editing either side.
+5. Full operating rules: `docs/agents/CODING_RULES.md`; setup and failure modes:
+   `docs/agents/RAG_GUIDE.md`; session checklist: `docs/agents/OPENCODE_CONTEXT.md`.

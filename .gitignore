@@ -49,3 +49,9 @@ TestResults*.xml
 __pycache__/
 *.py[cod]
 
+# Dify knowledge-base credentials (see .env.example)
+.env
+
+# Local RAG sync state
+.rag/
+
