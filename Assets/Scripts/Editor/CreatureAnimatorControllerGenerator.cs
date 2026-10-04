@@ -42,10 +42,13 @@ namespace Dab.Editor
     /// </summary>
     public static class CreatureAnimatorControllerGenerator
     {
+        // Both live under a Resources folder so the runtime rig can reach the
+        // controller with Resources.Load and no serialized reference (no
+        // prefabs exist in this project to carry one).
         private const string ControllerPath =
-            "Assets/Art/Animation/CreatureAnimatorController.controller";
+            "Assets/Art/Animation/Resources/CreatureAnimatorController.controller";
 
-        private const string ClipDirectory = "Assets/Art/Animation/Placeholders";
+        private const string ClipDirectory = "Assets/Art/Animation/Resources/Placeholders";
         private const string NeutralClipName = "zz_placeholder_Neutral.anim";
         private const string EchoClipName = "zz_placeholder_Echo.anim";
 
@@ -71,7 +74,7 @@ namespace Dab.Editor
         [MenuItem("Tools/Dab/Art/Generate Creature Animator")]
         public static void GenerateAll()
         {
-            EnsureFolder("Assets/Art/Animation");
+            EnsureFolder("Assets/Art/Animation/Resources");
             EnsureFolder(ClipDirectory);
 
             var neutral = CreatePlaceholderClip(

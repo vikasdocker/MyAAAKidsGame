@@ -83,6 +83,17 @@ namespace Dab.Runtime.Input
         [SerializeField, Range(0f, 3f)]
         private float _gracePeriodSeconds = 0.5f;
 
+        [Header("Mouse (Editor / Desktop)")]
+        [Tooltip("EnhancedTouch surfaces real touchscreens only; a mouse pressed " +
+                 "in the Unity editor never appears as a touch. When this is on, " +
+                 "the manager synthesises the same primary-stroke events from the " +
+                 "mouse button so clicking and dragging in the editor behaves " +
+                 "exactly like a finger — tap and drag parity is preserved. " +
+                 "No-ops when no mouse device is present, so builds on web and " +
+                 "mobile are unaffected.")]
+        [SerializeField]
+        private bool _mouseInputEnabled = true;
+
         #endregion
 
         #region Public Events
@@ -131,6 +142,12 @@ namespace Dab.Runtime.Input
 
         #region Internal State
 
+        // Synthetic touch id for the mouse-bound primary stroke. int.MaxValue can
+        // never collide with a real EnhancedTouch touchId, so the mouse press is
+        // just another finger in the slot table and inherits every gesture rule
+        // (dead zone, sample spacing, tap discrimination, drag completion).
+        private const int VirtualMouseTouchId = int.MaxValue;
+
         private readonly List<Vector2> _strokePoints = new List<Vector2>(64);
 
         private readonly int[] _trackedTouchIds = new int[3];
@@ -145,6 +162,9 @@ namespace Dab.Runtime.Input
         private float _clockTime;
         private float _secondsSinceGraceCleared;
         private bool _enhancedTouchReady;
+
+        private bool _mouseDown;
+        private Vector2 _mousePosition;
 
         #endregion
 
@@ -210,6 +230,7 @@ namespace Dab.Runtime.Input
             }
 
             PollTouches();
+            PollMouse();
         }
 
         #endregion
@@ -224,6 +245,9 @@ namespace Dab.Runtime.Input
         /// </summary>
         public void CancelActiveTouches()
         {
+            _mouseDown = false;
+            _mousePosition = Vector2.zero;
+
             if (ActiveTouchCount == 0)
             {
                 return;
@@ -298,108 +322,17 @@ namespace Dab.Runtime.Input
 
         private void HandleTouchBegan(Touch touch)
         {
-            if (ActiveTouchCount >= Mathf.Min(_maxTrackedTouches, _trackedTouchIds.Length))
-            {
-                return;
-            }
-
-            var position = touch.screenPosition;
-            if (!IsInsidePlayableArea(position))
-            {
-                return;
-            }
-
-            // Find an empty slot rather than assuming the next index is free.
-            // If a previous release left a hole, this fills it without
-            // overwriting an existing live ID.
-            var slot = -1;
-            for (var i = 0; i < _trackedTouchIds.Length; i++)
-            {
-                if (_trackedTouchIds[i] == -1)
-                {
-                    slot = i;
-                    break;
-                }
-            }
-
-            if (slot == -1)
-            {
-                return;
-            }
-
-            _trackedTouchIds[slot] = touch.touchId;
-
-            // The first finger of a new interaction owns the stroke. A second
-            // finger is tracked for pinch-style reactions but does not steal it.
-            if (_primaryTouchId == -1)
-            {
-                BeginPrimaryStroke(touch.touchId, position);
-            }
-
-            TouchBegan?.Invoke(position);
+            BeginTrackedGesture(touch.touchId, touch.screenPosition);
         }
 
         private void HandleTouchHeld(Touch touch)
         {
-            if (!IsTracked(touch.touchId))
-            {
-                return;
-            }
-
-            var position = touch.screenPosition;
-
-            if (!_touchExceedsDeadZone && HasExceededDeadZone(position))
-            {
-                _touchExceedsDeadZone = true;
-                IsDragging = true;
-            }
-
-            if (touch.touchId == _primaryTouchId && _touchExceedsDeadZone)
-            {
-                if (HasPassedSampleSpacing(position))
-                {
-                    _lastSamplePosition = position;
-                    _strokePoints.Add(position);
-                    TouchMoved?.Invoke(position);
-                }
-            }
+            UpdateTrackedGesture(touch.touchId, touch.screenPosition);
         }
 
         private void HandleTouchEnded(Touch touch)
         {
-            ReleaseTrackedId(touch.touchId);
-
-            var position = touch.screenPosition;
-            var duration = _clockTime - _touchStartTime;
-            var wasTap = !_touchExceedsDeadZone &&
-                         duration <= _tapMaxDuration &&
-                         touch.touchId == _primaryTouchId;
-
-            if (touch.touchId == _primaryTouchId)
-            {
-                if (IsDragging && _strokePoints.Count >= 2)
-                {
-                    DragCompleted?.Invoke(new List<Vector2>(_strokePoints));
-                }
-
-                EndPrimaryStroke();
-            }
-
-            TouchEnded?.Invoke(position, wasTap);
-
-            // A tap is a first-class outcome, not a lesser drag. Fired separately
-            // so consumers that only need intent can ignore stroke bookkeeping.
-            //
-            // The gate is time since the grace window was CLEARED, not touch age.
-            // Comparing against touch duration here would double-count
-            // _tapMaxDuration and silently cancel every tap, because a tap is by
-            // definition short. _tapMaxDuration decides what counts as a tap;
-            // _gracePeriodSeconds decides when taps start being honoured; they
-            // are independent axes and neither should be derived from the other.
-            if (wasTap && _secondsSinceGraceCleared >= _gracePeriodSeconds)
-            {
-                Tapped?.Invoke(position);
-            }
+            EndTrackedGesture(touch.touchId, touch.screenPosition);
         }
 
         private void BeginPrimaryStroke(int touchId, Vector2 position)
@@ -431,6 +364,12 @@ namespace Dab.Runtime.Input
                 return;
             }
 
+            if (_primaryTouchId == VirtualMouseTouchId)
+            {
+                PrimaryPosition = _mousePosition;
+                return;
+            }
+
             var activeTouches = Touch.activeTouches;
             for (var i = 0; i < activeTouches.Count; i++)
             {
@@ -442,6 +381,221 @@ namespace Dab.Runtime.Input
             }
 
             PrimaryPosition = Vector2.zero;
+        }
+
+        #endregion
+
+        #region Gesture Primitives (Touch + Mouse)
+
+        /// <summary>
+        /// Shared beginning for a gesture, used by both a real touch and the
+        /// synthesized mouse stroke. The mouse is just another finger in the
+        /// slot table, so every forgiveness rule (playable area, dead zone,
+        /// sample spacing, tap discrimination) applies to it identically.
+        /// </summary>
+        private void BeginTrackedGesture(int touchId, Vector2 position)
+        {
+            // The mouse reserves its own slot even when a real finger is already
+            // down; only genuine touches fight over the limited touch slots.
+            if (ActiveTouchCount >= Mathf.Min(_maxTrackedTouches, _trackedTouchIds.Length) &&
+                touchId != VirtualMouseTouchId)
+            {
+                return;
+            }
+
+            if (!IsInsidePlayableArea(position))
+            {
+                return;
+            }
+
+            // Find an empty slot rather than assuming the next index is free.
+            // If a previous release left a hole, this fills it without
+            // overwriting an existing live ID.
+            var slot = -1;
+            for (var i = 0; i < _trackedTouchIds.Length; i++)
+            {
+                if (_trackedTouchIds[i] == -1)
+                {
+                    slot = i;
+                    break;
+                }
+            }
+
+            if (slot == -1)
+            {
+                return;
+            }
+
+            _trackedTouchIds[slot] = touchId;
+
+            // The first finger of a new interaction owns the stroke. A second
+            // finger is tracked for pinch-style reactions but does not steal it.
+            if (_primaryTouchId == -1)
+            {
+                BeginPrimaryStroke(touchId, position);
+            }
+
+            TouchBegan?.Invoke(position);
+        }
+
+        /// <summary>
+        /// Shared held/moved handling for a gesture, used by both a real touch
+        /// and the mouse. Inflates travel past the dead zone into a drag and
+        /// emits samples past the spacing threshold only for the primary stroke.
+        /// </summary>
+        private void UpdateTrackedGesture(int touchId, Vector2 position)
+        {
+            if (!IsTracked(touchId))
+            {
+                return;
+            }
+
+            if (!_touchExceedsDeadZone && HasExceededDeadZone(position))
+            {
+                _touchExceedsDeadZone = true;
+                IsDragging = true;
+            }
+
+            if (touchId == _primaryTouchId && _touchExceedsDeadZone)
+            {
+                if (HasPassedSampleSpacing(position))
+                {
+                    _lastSamplePosition = position;
+                    _strokePoints.Add(position);
+                    TouchMoved?.Invoke(position);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Shared ending for a gesture, used by both a real touch and the mouse.
+        /// Resolves tap-versus-drag, raises the lifecycle events, and hands a
+        /// completed stroke to consumers that only want an outcome.
+        /// </summary>
+        private void EndTrackedGesture(int touchId, Vector2 position)
+        {
+            ReleaseTrackedId(touchId);
+
+            var duration = _clockTime - _touchStartTime;
+            var wasTap = !_touchExceedsDeadZone &&
+                         duration <= _tapMaxDuration &&
+                         touchId == _primaryTouchId;
+
+            if (touchId == _primaryTouchId)
+            {
+                if (IsDragging && _strokePoints.Count >= 2)
+                {
+                    DragCompleted?.Invoke(new List<Vector2>(_strokePoints));
+                }
+
+                EndPrimaryStroke();
+            }
+
+            TouchEnded?.Invoke(position, wasTap);
+
+            // A tap is a first-class outcome, not a lesser drag. Fired separately
+            // so consumers that only need intent can ignore stroke bookkeeping.
+            //
+            // The gate is time since the grace window was CLEARED, not touch age.
+            // Comparing against touch duration here would double-count
+            // _tapMaxDuration and silently cancel every tap, because a tap is by
+            // definition short. _tapMaxDuration decides what counts as a tap;
+            // _gracePeriodSeconds decides when taps start being honoured; they
+            // are independent axes and neither should be derived from the other.
+            if (wasTap && _secondsSinceGraceCleared >= _gracePeriodSeconds)
+            {
+                Tapped?.Invoke(position);
+            }
+        }
+
+        #endregion
+
+        #region Mouse Input
+
+        /// <summary>
+        /// Polls the mouse device and forwards presses, holds and releases into
+        /// the same gesture pipeline as touch, so editor and desktop play can
+        /// drive the full loop (paint, state change, FX) with a mouse.
+        ///
+        /// EnhancedTouch does not observe the mouse, which is why this path
+        /// exists at all. The three handlers double as testable entry points: a
+        /// PlayMode test can feed a stroke without any physical device.
+        /// </summary>
+        private void PollMouse()
+        {
+            if (!_mouseInputEnabled)
+            {
+                return;
+            }
+
+            var mouse = Mouse.current;
+            if (mouse == null)
+            {
+                return;
+            }
+
+            var position = mouse.position.ReadValue();
+
+            if (mouse.leftButton.wasPressedThisFrame)
+            {
+                HandleMousePress(position);
+            }
+            else if (mouse.leftButton.isPressed)
+            {
+                HandleMouseHold(position);
+            }
+
+            if (mouse.leftButton.wasReleasedThisFrame)
+            {
+                HandleMouseRelease(position);
+            }
+        }
+
+        /// <summary>
+        /// Begins a primary stroke from a mouse press. Public so tests and
+        /// non-device input streams can drive the exact path a real click takes.
+        /// </summary>
+        public void HandleMousePress(Vector2 position)
+        {
+            if (!_mouseInputEnabled || _mouseDown)
+            {
+                return;
+            }
+
+            _mouseDown = true;
+            _mousePosition = position;
+            BeginTrackedGesture(VirtualMouseTouchId, position);
+        }
+
+        /// <summary>
+        /// Continues a mouse stroke (or holds it still, mirroring a resting
+        /// finger). Public for the same reason as <see cref="HandleMousePress"/>.
+        /// </summary>
+        public void HandleMouseHold(Vector2 position)
+        {
+            if (!_mouseDown || !_mouseInputEnabled)
+            {
+                return;
+            }
+
+            _mousePosition = position;
+            UpdateTrackedGesture(VirtualMouseTouchId, position);
+        }
+
+        /// <summary>
+        /// Lifts the mouse stroke. Public for the same reason as
+        /// <see cref="HandleMousePress"/>.
+        /// </summary>
+        public void HandleMouseRelease(Vector2 position)
+        {
+            if (!_mouseDown || !_mouseInputEnabled)
+            {
+                return;
+            }
+
+            _mouseDown = false;
+            _mousePosition = Vector2.zero;
+            EndTrackedGesture(VirtualMouseTouchId, position);
         }
 
         #endregion

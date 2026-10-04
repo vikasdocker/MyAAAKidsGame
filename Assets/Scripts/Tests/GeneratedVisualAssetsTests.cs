@@ -162,7 +162,7 @@ namespace Dab.Tests.VisualBridge
 
 #if UNITY_EDITOR
         private const string ControllerPath =
-            "Assets/Art/Animation/CreatureAnimatorController.controller";
+            "Assets/Art/Animation/Resources/CreatureAnimatorController.controller";
 
         private static readonly string[] StateNames =
         {

@@ -120,8 +120,17 @@ Shader "Dab/Paint/CreatureCanvas"
             // their own work rather than as part of the creature's skin.
             half SampleReliefHeight (float2 uv)
             {
+                // Vertex-stage fetch: this is called from Vertex, so the sample
+                // must carry an explicit mip. SAMPLE_TEXTURE2D lowers to an
+                // implicit-LOD Sample which D3D11's vs_4_0 profile cannot map
+                // ("cannot map expression to vs_4_0"); WebGL rakes it through the
+                // same restriction. SAMPLE_TEXTURE2D_LOD issues textureLod /
+                // samplelevel, which both vendor pipelines accept in the vertex
+                // stage. UV mip 0 is deliberate: the mask is late-bind paint and
+                // its texel footprint at model LOD is thinner than a full mip
+                // pyramid would average.
                 #if defined(_CREATURE_RELIEF)
-                    half mask = SAMPLE_TEXTURE2D(_PaintMap, sampler_PaintMap, uv).a;
+                    half mask = SAMPLE_TEXTURE2D_LOD(_PaintMap, sampler_PaintMap, uv, 0).a;
                     return saturate(mask) * _PaintStrength;
                 #else
                     return 0.0h;
@@ -397,10 +406,42 @@ Shader "Dab/Paint/CreatureCanvas"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 
+            // This pass displaces vertices exactly like the forward pass, so it
+            // reads the same material inputs and must declare them for itself:
+            // passes compile as independent shader units and inherit nothing.
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseColor;
+                float4 _SpecularColor;
+                float4 _RimColor;
+                float  _PaintStrength;
+                float  _RimPower;
+                float  _RimStrength;
+                float  _AmbientBoost;
+                float  _Wrap;
+                float  _Smoothness;
+                float  _ReliefHeight;
+                float  _ReliefNormalStrength;
+                float  _ReliefNormalBlend;
+                float  _ReliefFeather;
+                float4 _SheenColor;
+                float  _SheenStrength;
+                float  _SheenPower;
+            CBUFFER_END
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_PaintMap);
+            SAMPLER(sampler_PaintMap);
+            TEXTURE2D(_ReliefNormalMap);
+            SAMPLER(sampler_ReliefNormalMap);
+
             half SampleReliefHeightShadow (float2 uv)
             {
+                // Same explicit-mip rule as SampleReliefHeight in the forward
+                // pass: this runs in ShadowPassVertex, so the fetch must map to
+                // a vs_4_0/WebGL vertex-stage textureLod.
                 #if defined(_CREATURE_RELIEF)
-                    return saturate(SAMPLE_TEXTURE2D(_PaintMap, sampler_PaintMap, uv).a) * _PaintStrength;
+                    return saturate(SAMPLE_TEXTURE2D_LOD(_PaintMap, sampler_PaintMap, uv, 0).a) * _PaintStrength;
                 #else
                     return 0.0h;
                 #endif
@@ -544,8 +585,9 @@ Shader "Dab/Paint/CreatureCanvas"
 
             half SampleReliefHeightDepth (float2 uv)
             {
+                // Explicit-mip vertex fetch; see SampleReliefHeight.
                 #if defined(_CREATURE_RELIEF)
-                    return saturate(SAMPLE_TEXTURE2D(_PaintMap, sampler_PaintMap, uv).a) * _PaintStrength;
+                    return saturate(SAMPLE_TEXTURE2D_LOD(_PaintMap, sampler_PaintMap, uv, 0).a) * _PaintStrength;
                 #else
                     return 0.0h;
                 #endif
