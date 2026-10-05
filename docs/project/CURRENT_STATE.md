@@ -8,26 +8,13 @@
 
 ## HEAD vs working tree (READ THIS FIRST)
 
-Git HEAD = `a610734` (6 commits; the newest adds the Dify RAG knowledge layer).
+Git HEAD = `14c3851` (10 commits). The playable menu/playground loop, local
+paint persistence, Phase 3 Echo binding and placement, and initial safety
+constraint tests are committed.
 
-**The working tree is ahead of HEAD by one complete, self-consistent feature that was never committed** ("make the loop playable"), plus the roadmap's three Immediate follow-ups applied to it on 2026-10-05:
-
-```
- M Assets/Scripts/Runtime/Input/FluidTouchInputManager.cs        (+246) mouse-parity input layer
- M Assets/Scripts/Runtime/Playtest/CreaturePlaytestBootstrap.cs  (-74)  now calls PaintingRig.Build
- M Assets/Shaders/Paint/CreatureCanvas.shader                     (+48) vertex LOD + ShadowCaster CBUFFER fix
- M ProjectSettings/EditorBuildSettings.asset                             3 scenes registered
-?? Assets/Scripts/Runtime/Core/PaintingRig.cs                     (151) shared rig builder
-?? Assets/Scripts/Runtime/Minigames/                              (409) PlaygroundBootstrap + PlaygroundPetMotor
-?? Assets/Scripts/Runtime/UI/                                     (535) MainMenuBootstrap, UxFactory, Palette
-?? Assets/Scripts/Editor/Gameplay/GameplayScenesSetup.cs          (133)
-?? Assets/Scenes/SCN_MainMenu.unity, SCN_Playground.unity
- ?? Assets/Scripts/Tests/GameplayLoopTests.cs                      (461, 12 tests)
-```
-
-**Why HEAD is probably red:** `VisualBridgeTests` (unmodified at HEAD) asserts `CreatureCanvasShaderCompilesWithoutErrors` and that shadow/depth passes displace like forward — while the fix for exactly those failures sits **uncommitted**. Likewise `GameplayLoopTests` needs `HandleMousePress/Hold/Release`, which do not exist at HEAD.
-
-**Rule for agents:** do not modify, refactor, or commit this work as a side effect. It is the developer's in-flight feature. Roadmap "Immediate" items 2–4 (PAINT scene fix, `[DBG-*]` removal, animation wiring), local paint persistence, the Echo runtime foundation, and the initial Adorn interaction were applied deliberately on top of it at the developer's direction. The 59/59 full-suite pass predates the 3 latest constraint-guard tests; rerun when the Unity project is not in use by another session.
+The current working tree contains only documentation updates recording the
+latest 62/62 PlayMode run. Preserve unrelated in-flight work from other
+sessions; do not commit it without direction.
 
 ---
 
@@ -41,7 +28,7 @@ Git HEAD = `a610734` (6 commits; the newest adds the Dify RAG knowledge layer).
 | **FX pool** | `CreatureFXSpawner.cs` (788 l): fixed pool, round-robin reuse, `EmitParams` variation, zero-allocation contract asserted by tests; ink / heart / 12-spoke success bursts |
 | **Runtime-built scenes** | 3 scenes, each a single bootstrap GameObject building the world in `Awake`. All scene script GUIDs resolve; no `.prefab` files exist at all |
 | **Editor tooling** | 7 `MenuItem` entries + `-executeMethod` entry points: `CreatureAnimatorControllerGenerator`, `CreatureFXAssetGenerator`, `DabArtGeneration`, `PlaytestSceneSetup`, `GameplayScenesSetup`. Reproducible asset generation |
-| **Tests** | 62 PlayMode tests across 10 files, including Adorn placement/cancellation/parity and safety-constraint regression guards. The latest 3 constraint tests have not yet been run; the other 59 passed in the last full run |
+| **Tests** | 62 PlayMode tests across 10 files, including Adorn placement/cancellation/parity, three safety-constraint regression guards, and existing painting, scene, save, and ability coverage; full suite passed 62/62 |
 | **Animation** (wired 2026-10-05) | `PaintingRig.Build()` adds an `Animator` + `CreatureAnimationBridge` and loads the generated Base+Echo controller from `Resources` (`Assets/Art/Animation/Resources/`), mirroring the FX texture loading pattern. Asserted by `Playground_RigDrivesGeneratedAnimator` |
 | **Paint persistence (MVP)** | Completed UV/color strokes are appended to a local versioned JSON-lines journal and restored through the paint compositor before first input. Writes flush on pause, quit, and rig destruction. Future-variant remapping is deferred |
 | **Echo runtime + Adorn interaction (Phase 3)** | Typed catalog maps Horn Swirl → Playful Charge; icon-first Adorn mode places a visible Cocoa Ink spiral on the creature and binds the ability. Visible mark stroke and mark ID use the existing local paint and mark saves. Tap and drag-start are supported; placement mode gates freehand input |
@@ -81,9 +68,8 @@ Git HEAD = `a610734` (6 commits; the newest adds the Dify RAG knowledge layer).
 
 | # | Defect | Evidence |
 |---|---|---|
-| 1 | **HEAD is likely red.** | See "HEAD vs working tree" above. The working tree compiles clean and all 59/59 PlayMode tests pass (2026-10-05). |
-| 2 | **CI never compiles Unity.** | `.github/workflows/verify-pipeline.yml` runs only the Python art gate. The repo can be entirely non-compiling and CI stays green. |
-| 3 | **Application identifiers still the URP template's.** | `com.UnityTechnologies.com.unity.template.urpblank` (Android) etc.; `companyName: DefaultCompany`. |
+| 1 | **CI never compiles Unity.** | `.github/workflows/verify-pipeline.yml` runs only the Python art gate. The repo can be entirely non-compiling and CI stays green. |
+| 2 | **Application identifiers still the URP template's.** | `com.UnityTechnologies.com.unity.template.urpblank` (Android) etc.; `companyName: DefaultCompany`. |
 
 Fixed 2026-10-05 (previously defect #1): the Paint button loaded the nonexistent scene `SCN_Playtest` and threw `ArgumentException` on tap; it now loads `Playtest`, covered by `PaintButton_LoadsPaintingDemoFromMenu`.
 
@@ -108,7 +94,7 @@ Fixed 2026-10-05 (previously defect #1): the Paint button loaded the nonexistent
 6. `ADR-0001` status `Proposed` though fully implemented; `docs/registry/architecture.yaml` marks everything `proposed` and claims to be auto-generated (no automation exists).
 7. `production/README.md` documents `stage.txt`, which does not exist (only `review-mode.txt` = `lean`).
 8. `Assets/Scripts/Editor/README.md` lists 4 "planned tools not yet built" but never mentions the 5 tools that exist.
-9. `Assets/Scripts/Tests/README.md` lists paint undo and non-negotiable constraint tests as targets; neither is implemented yet.
+9. `Assets/Scripts/Tests/README.md` lists paint undo and broader safety-constraint coverage as targets; paint undo remains unimplemented, while initial fail-state, forbidden-system, RNG, and package-SDK guards now exist.
 10. `docs/framework/technical-preferences.md:63` cites `design/art/art-bible.md` (lowercase) — actual is `design/Art/art-bible.md`; breaks on Linux CI if ever resolved path-wise.
 11. All 31 `.cs` `.meta` files are 2-line hand-authored stubs, in violation of AGENTS.md's "do not hand-author `.meta` files".
 12. `design/Art/art-bible.md` references `Assets/Fonts/` and `Assets/ThirdPartyLicenses/`, which do not exist.

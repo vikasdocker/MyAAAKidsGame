@@ -131,3 +131,7 @@ monetization, and social runtime type declarations, random calls in gameplay
 decision code, and third-party ad/analytics SDK package identifiers. Updated
 the test guide and roadmap to mark this as partial coverage: source-level timer
 and broader package-ID guards remain future work.
+
+**Validation:** full Unity PlayMode suite passed (62/62) on 2026-10-05;
+targeted C# diagnostics and static package/gameplay scans found no errors or
+forbidden dependency/RNG matches; `git diff --check` passed.
