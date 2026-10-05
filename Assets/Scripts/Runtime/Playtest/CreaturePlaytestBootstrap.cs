@@ -1,7 +1,9 @@
 using System;
 using UnityEngine;
+using Dab.Runtime.Abilities;
 using Dab.Runtime.Core;
 using Dab.Runtime.Painting;
+using Dab.Runtime.UI;
 
 namespace Dab.Runtime.Playtest
 {
@@ -55,6 +57,9 @@ namespace Dab.Runtime.Playtest
                 "Creature",
                 Vector3.zero,
                 Vector3.one * _creatureScale);
+
+            SignatureMarkAdornUI.Build(
+                rig.Creature.GetComponent<SignatureMarkPlacementController>());
 
             BuildLighting();
             BuildCamera(rig.Generator);

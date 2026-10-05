@@ -5,11 +5,13 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using Dab.Runtime.Abilities;
 using Dab.Runtime.Creature;
 using Dab.Runtime.FX;
 using Dab.Runtime.Input;
 using Dab.Runtime.Minigames;
 using Dab.Runtime.Painting;
+using Dab.Runtime.Save;
 
 namespace Dab.Tests.Gameplay
 {
@@ -79,12 +81,19 @@ namespace Dab.Tests.Gameplay
             var generator = Object.FindFirstObjectByType<CreatureTestMeshGenerator>();
             var fx = Object.FindFirstObjectByType<CreatureFXSpawner>();
             var motor = Object.FindFirstObjectByType<PlaygroundPetMotor>();
+            var marks = Object.FindFirstObjectByType<CreatureSignatureMarks>();
+            var markPersistence = Object.FindFirstObjectByType<CreatureSignatureMarkPersistence>();
 
             Assert.That(machine, Is.Not.Null, "Machine must exist.");
             Assert.That(controller, Is.Not.Null, "Paint controller must exist.");
             Assert.That(generator, Is.Not.Null, "Generator must exist.");
             Assert.That(fx, Is.Not.Null, "FX spawner must exist.");
             Assert.That(motor, Is.Not.Null, "Pet motor must exist.");
+            Assert.That(marks, Is.Not.Null, "The rig must own signature-mark state.");
+            Assert.That(markPersistence, Is.Not.Null,
+                "The rig must wire local persistence for bound mark IDs.");
+            Assert.That(marks.BoundMarks, Is.Empty,
+                "A new creature must not receive an authored mark automatically.");
             Assert.That(generator.TotalTriangleCount, Is.GreaterThan(0),
                 "Creature mesh must build.");
             Assert.That(machine.CurrentStateId, Is.EqualTo(CreatureStateId.Idle),
@@ -150,6 +159,135 @@ namespace Dab.Tests.Gameplay
                 "Controller contract: a layer named 'Base'.");
             Assert.That(animator.GetLayerIndex("Echo"), Is.GreaterThanOrEqualTo(0),
                 "Controller contract: a layer named 'Echo'.");
+        }
+
+        [UnityTest]
+        public IEnumerator AdornButton_TapPlacesVisibleHornSwirlAndBindsItsAbility()
+        {
+            yield return LoadSingle(PlaygroundScene);
+
+            var placement = Object.FindFirstObjectByType<SignatureMarkPlacementController>();
+            var input = Object.FindFirstObjectByType<FluidTouchInputManager>();
+            var paint = Object.FindFirstObjectByType<CreaturePaintController>();
+            var machine = Object.FindFirstObjectByType<CreatureStateMachine>();
+            var button = FindButtonWithLabel(
+                Object.FindObjectsByType<Button>(
+                    FindObjectsInactive.Exclude,
+                    FindObjectsSortMode.None),
+                "adorn");
+
+            Assert.That(placement, Is.Not.Null);
+            Assert.That(input, Is.Not.Null);
+            Assert.That(paint, Is.Not.Null);
+            Assert.That(button, Is.Not.Null, "The playground needs an Adorn control.");
+            Assert.That(placement.IsMarkBound, Is.False,
+                "The mark must not be granted before the child authors it.");
+
+            var completedStrokes = 0;
+            paint.StrokeCompleted += _ => completedStrokes++;
+            var dabsBefore = paint.DabCount;
+
+            button.onClick.Invoke();
+            Assert.That(placement.IsAwaitingPlacement, Is.True,
+                "The Adorn control should enter deliberate placement mode.");
+
+            var center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            Assert.That(
+                Object.FindFirstObjectByType<CreatureTestMeshGenerator>()
+                    .TryScreenToUv(center, out _),
+                Is.True,
+                "The center tap must hit the pet in the playground framing.");
+
+            input.HandleMousePress(center);
+            input.HandleMouseRelease(center);
+            yield return null;
+
+            Assert.That(placement.IsMarkBound, Is.True,
+                "A surface tap should bind the authored Horn Swirl.");
+            Assert.That(placement.IsAwaitingPlacement, Is.False,
+                "Successful placement should leave placement mode.");
+            Assert.That(paint.DabCount, Is.GreaterThan(dabsBefore),
+                "Placement must draw the Horn Swirl through the persistent paint compositor.");
+            Assert.That(completedStrokes, Is.EqualTo(1),
+                "The visible mark must be recorded as one persistent paint stroke.");
+            Assert.That(machine.CurrentStateId, Is.EqualTo(CreatureStateId.Idle),
+                "Placing a mark must not accidentally start freehand painting.");
+        }
+
+        [UnityTest]
+        public IEnumerator AdornButton_CanCancelWithoutChangingAuthoredState()
+        {
+            yield return LoadSingle(PlaygroundScene);
+
+            var placement = Object.FindFirstObjectByType<SignatureMarkPlacementController>();
+            var button = FindButtonWithLabel(
+                Object.FindObjectsByType<Button>(
+                    FindObjectsInactive.Exclude,
+                    FindObjectsSortMode.None),
+                "adorn");
+
+            Assert.That(placement, Is.Not.Null);
+            Assert.That(button, Is.Not.Null);
+
+            button.onClick.Invoke();
+            Assert.That(placement.IsAwaitingPlacement, Is.True);
+
+            button.onClick.Invoke();
+
+            Assert.That(placement.IsAwaitingPlacement, Is.False);
+            Assert.That(placement.IsMarkBound, Is.False,
+                "Cancelling placement must not create or save a mark.");
+        }
+
+        [UnityTest]
+        public IEnumerator AdornDragStartingOnPetPlacesTheSameMarkAsATap()
+        {
+            yield return LoadSingle(PlaygroundScene);
+
+            var placement = Object.FindFirstObjectByType<SignatureMarkPlacementController>();
+            var input = Object.FindFirstObjectByType<FluidTouchInputManager>();
+            var button = FindButtonWithLabel(
+                Object.FindObjectsByType<Button>(
+                    FindObjectsInactive.Exclude,
+                    FindObjectsSortMode.None),
+                "adorn");
+            var center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+
+            Assert.That(button, Is.Not.Null);
+            button.onClick.Invoke();
+
+            input.HandleMousePress(center);
+            input.HandleMouseHold(center + Vector2.right * 100f);
+            input.HandleMouseRelease(center + Vector2.right * 100f);
+
+            Assert.That(placement.IsMarkBound, Is.True,
+                "A drag beginning on the creature must have the same authored result as a tap.");
+        }
+
+        [UnityTest]
+        public IEnumerator TouchStartingOffCreatureDoesNotCreateAPaintStroke()
+        {
+            yield return LoadSingle(PlaygroundScene);
+
+            var input = Object.FindFirstObjectByType<FluidTouchInputManager>();
+            var paint = Object.FindFirstObjectByType<CreaturePaintController>();
+            var generator = Object.FindFirstObjectByType<CreatureTestMeshGenerator>();
+            var outsidePoint = new Vector2(Screen.width * 0.1f, Screen.height * 0.9f);
+            var dabsBefore = paint.DabCount;
+            var completedStrokes = 0;
+            paint.StrokeCompleted += _ => completedStrokes++;
+
+            Assert.That(
+                generator.TryScreenToUv(outsidePoint, out _),
+                Is.False,
+                "The test point must not hit the creature.");
+
+            input.HandleMousePress(outsidePoint);
+            input.HandleMouseRelease(outsidePoint);
+
+            Assert.That(paint.DabCount, Is.EqualTo(dabsBefore));
+            Assert.That(completedStrokes, Is.Zero,
+                "A touch beginning outside the creature must not persist a phantom stroke.");
         }
 
         #endregion
@@ -275,6 +413,12 @@ namespace Dab.Tests.Gameplay
             var input = Object.FindFirstObjectByType<FluidTouchInputManager>();
             var machine = Object.FindFirstObjectByType<CreatureStateMachine>();
             var generator = Object.FindFirstObjectByType<CreatureTestMeshGenerator>();
+            var marks = Object.FindFirstObjectByType<CreatureSignatureMarks>();
+
+            Assert.That(
+                marks.BindMark(SignatureMarkId.HornSwirl),
+                Is.EqualTo(SignatureMarkBindResult.Bound),
+                "This development integration explicitly authors the MVP mark.");
 
             var petStart = generator.transform.position;
 
@@ -319,6 +463,12 @@ namespace Dab.Tests.Gameplay
 
                 if (running && machine.CurrentStateId == CreatureStateId.AbilityUnlock)
                 {
+                    var abilityState = machine.GetState(CreatureStateId.AbilityUnlock)
+                        as AbilityUnlockState;
+                    Assert.That(abilityState, Is.Not.Null);
+                    Assert.That(
+                        abilityState.AbilityId,
+                        Is.EqualTo(CreatureAbilityId.PlayfulCharge));
                     flourishing = true;
                 }
             }

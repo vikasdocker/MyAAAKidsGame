@@ -1,4 +1,5 @@
 using UnityEngine;
+using Dab.Runtime.Abilities;
 using Dab.Runtime.Creature;
 using Dab.Runtime.Input;
 using Dab.Runtime.Painting;
@@ -7,9 +8,9 @@ namespace Dab.Runtime.Minigames
 {
     /// <summary>
     /// The pet's free-run behaviour for the playground scene: tap anywhere on the
-    /// ground and the painted pet trots over, then runs through its custom
-    /// ability flourish; when the flourish ends it keeps wandering the field on a
-    /// deterministic golden-angle path until you call it again.
+    /// ground and the painted pet trots over, then performs its first authored,
+    /// bound ability if one exists. Otherwise it keeps wandering the field on a
+    /// deterministic golden-angle path.
     ///
     /// Gameplay contract
     /// ----------------
@@ -52,6 +53,7 @@ namespace Dab.Runtime.Minigames
         [SerializeField] private GameObject _ground;
 
         private CreatureStateMachine _machine;
+        private CreatureSignatureMarks _signatureMarks;
         private CreatureTestMeshGenerator _generator;
         private FluidTouchInputManager _input;
 
@@ -66,6 +68,7 @@ namespace Dab.Runtime.Minigames
         private void Start()
         {
             _machine = GetComponent<CreatureStateMachine>();
+            _signatureMarks = GetComponent<CreatureSignatureMarks>();
             _generator = GetComponent<CreatureTestMeshGenerator>();
             _input = GetComponent<FluidTouchInputManager>();
 
@@ -233,11 +236,18 @@ namespace Dab.Runtime.Minigames
             _hasGoal = false;
             _basePosition = new Vector3(_goal.x, 0f, _goal.z);
 
-            // The pet runs through its custom ability flourish on arrival. If a
-            // gesture had the machine busy, the next arrival retries.
-            if (_machine.CurrentStateId == CreatureStateId.Idle)
+            // Only an authored, bound mark can cause an ability performance.
+            if (_machine.CurrentStateId == CreatureStateId.Idle &&
+                _signatureMarks != null &&
+                _signatureMarks.TryGetFirstBoundAbility(out var abilityId))
             {
-                _machine.TransitionTo(CreatureStateId.AbilityUnlock);
+                var abilityState = _machine.GetState(CreatureStateId.AbilityUnlock)
+                    as AbilityUnlockState;
+                if (abilityState != null)
+                {
+                    abilityState.AbilityId = abilityId;
+                    _machine.TransitionTo(CreatureStateId.AbilityUnlock);
+                }
             }
         }
 

@@ -1,8 +1,11 @@
 using UnityEngine;
+using Dab.Runtime.Abilities;
 using Dab.Runtime.Creature;
 using Dab.Runtime.FX;
 using Dab.Runtime.Input;
 using Dab.Runtime.Painting;
+using Dab.Runtime.Save;
+using Dab.Runtime.UI;
 
 namespace Dab.Runtime.Core
 {
@@ -141,10 +144,12 @@ namespace Dab.Runtime.Core
                 // Cloned per-instance: the paint controller writes _PaintMap into
                 // this material, and a shared asset would leak paint between
                 // creatures and survive scene reloads in the editor.
-                renderer.material = new Material(shader)
+                var canvasMaterial = new Material(shader)
                 {
                     name = name + " Canvas (Runtime)"
                 };
+                canvasMaterial.SetColor("_BaseColor", Palette.DawnCream);
+                renderer.material = canvasMaterial;
             }
 
             var generator = creature.AddComponent<CreatureTestMeshGenerator>();
@@ -152,8 +157,11 @@ namespace Dab.Runtime.Core
             paint.TargetRenderer = renderer;
 
             var machine = creature.AddComponent<CreatureStateMachine>();
+            creature.AddComponent<CreatureSignatureMarks>();
+            creature.AddComponent<CreatureSignatureMarkPersistence>();
             var fx = creature.AddComponent<CreatureFXSpawner>();
             var input = creature.AddComponent<FluidTouchInputManager>();
+            creature.AddComponent<SignatureMarkPlacementController>();
 
             // Animation: the bridge translates state changes into Animator
             // layer weights and triggers, which is the art bible's motion
@@ -182,7 +190,10 @@ namespace Dab.Runtime.Core
             // Connects touch/mouse events to dab stamping through the
             // generator's raycast bridge. Done before activation so the first
             // frame of play can already paint.
-            paint.BindToInput(input, generator.CreateScreenToUvDelegate());
+            paint.BindToInput(
+                input,
+                generator.CreateScreenToUvDelegate(),
+                position => generator.TryScreenToUv(position, out _));
 
             // Everything every OnEnable depends on is in place, so activation
             // lets each component initialise exactly once, in the right order.

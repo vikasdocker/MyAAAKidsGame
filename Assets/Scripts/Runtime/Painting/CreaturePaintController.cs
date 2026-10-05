@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Dab.Runtime.Input;
+using Dab.Runtime.Save;
 
 namespace Dab.Runtime.Painting
 {
@@ -36,6 +37,7 @@ namespace Dab.Runtime.Painting
     ///     never be undone by them or by a stray tap.
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(CreaturePaintPersistence))]
     public sealed class CreaturePaintController : MonoBehaviour
     {
         #region Configuration
@@ -113,6 +115,9 @@ namespace Dab.Runtime.Painting
         /// </summary>
         public event Action<Vector2> DabComposited;
 
+        /// <summary>Raised once when a completed stroke is ready to persist.</summary>
+        public event Action<PaintStroke> StrokeCompleted;
+
         #endregion
 
         #region Internal State
@@ -133,6 +138,10 @@ namespace Dab.Runtime.Painting
         private readonly List<Vector2> _pendingDabs = new List<Vector2>(32);
 
         private int _paintPropertyId;
+        private PaintStroke _activeStroke;
+        private bool _isRestoringStroke;
+        private bool _paintingInputEnabled = true;
+        private bool _inputStrokeActive;
 
         #endregion
 
@@ -186,6 +195,8 @@ namespace Dab.Runtime.Painting
             _hasLastSample = true;
             _lastSampleUv = uv;
             _pendingDabs.Clear();
+            _activeStroke = new PaintStroke();
+            _activeStroke.Samples.Add(new PaintSample(uv, color));
 
             SetBrushColor(color);
             StampDab(uv);
@@ -217,6 +228,8 @@ namespace Dab.Runtime.Painting
                 return;
             }
 
+            _activeStroke?.Samples.Add(new PaintSample(uv, color));
+
             var steps = Mathf.Clamp(
                 Mathf.CeilToInt(distance / _maxDabSpacingUv), 1, 64);
 
@@ -238,8 +251,44 @@ namespace Dab.Runtime.Painting
         /// </summary>
         public void EndStroke()
         {
+            var completedStroke = _activeStroke;
+            _activeStroke = null;
             _hasLastSample = false;
             _lastSampleUv = Vector2.zero;
+
+            if (!_isRestoringStroke &&
+                completedStroke != null &&
+                completedStroke.Samples.Count > 0)
+            {
+                StrokeCompleted?.Invoke(completedStroke);
+            }
+        }
+
+        /// <summary>Replays one saved stroke without emitting a save event.</summary>
+        public void RestoreStroke(PaintStroke stroke)
+        {
+            if (stroke == null || stroke.Samples == null || stroke.Samples.Count == 0)
+            {
+                throw new ArgumentException(
+                    "A restored stroke must contain at least one paint sample.",
+                    nameof(stroke));
+            }
+
+            _isRestoringStroke = true;
+            try
+            {
+                BeginStroke(stroke.Samples[0].Uv, stroke.Samples[0].Color);
+                for (var i = 1; i < stroke.Samples.Count; i++)
+                {
+                    var sample = stroke.Samples[i];
+                    PaintAt(sample.Uv, sample.Color);
+                }
+            }
+            finally
+            {
+                EndStroke();
+                _isRestoringStroke = false;
+            }
         }
 
         /// <summary>
@@ -247,7 +296,10 @@ namespace Dab.Runtime.Painting
         /// touch that lands on this controller. Kept separate from the touch
         /// plumbing so the input layer stays testable in isolation.
         /// </summary>
-        public void BindToInput(FluidTouchInputManager input, Func<Vector2, Vector2> screenToUv)
+        public void BindToInput(
+            FluidTouchInputManager input,
+            Func<Vector2, Vector2> screenToUv,
+            Func<Vector2, bool> isOnSurface)
         {
             if (input == null)
             {
@@ -259,17 +311,62 @@ namespace Dab.Runtime.Painting
                 throw new ArgumentNullException(nameof(screenToUv));
             }
 
+            if (isOnSurface == null)
+            {
+                throw new ArgumentNullException(nameof(isOnSurface));
+            }
+
             // Rebinding without unbinding first would double-paint every touch.
             UnbindFromInput();
 
             _boundInput = input;
-            _onTouchBegan = position => BeginStroke(screenToUv(position), Color.white);
-            _onTouchMoved = position => PaintAt(screenToUv(position), Color.white);
-            _onTouchEnded = (position, wasTap) => EndStroke();
+            _onTouchBegan = position =>
+            {
+                if (_paintingInputEnabled && isOnSurface(position))
+                {
+                    BeginStroke(screenToUv(position), Color.white);
+                    _inputStrokeActive = true;
+                }
+            };
+            _onTouchMoved = position =>
+            {
+                if (_paintingInputEnabled && _inputStrokeActive)
+                {
+                    PaintAt(screenToUv(position), Color.white);
+                }
+            };
+            _onTouchEnded = (position, wasTap) =>
+            {
+                if (_inputStrokeActive)
+                {
+                    EndStroke();
+                    _inputStrokeActive = false;
+                }
+            };
 
             input.TouchBegan += _onTouchBegan;
             input.TouchMoved += _onTouchMoved;
             input.TouchEnded += _onTouchEnded;
+        }
+
+        /// <summary>
+        /// Temporarily routes touch input away from freehand painting while a
+        /// deliberate surface-placement interaction owns the creature.
+        /// Programmatic strokes remain available to that interaction.
+        /// </summary>
+        public void SetPaintingInputEnabled(bool enabled)
+        {
+            if (_paintingInputEnabled == enabled)
+            {
+                return;
+            }
+
+            _paintingInputEnabled = enabled;
+            if (!enabled && _inputStrokeActive)
+            {
+                EndStroke();
+                _inputStrokeActive = false;
+            }
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using UnityEngine;
+using Dab.Runtime.Abilities;
 using Dab.Runtime.Core;
 using Dab.Runtime.UI;
 
@@ -33,6 +34,9 @@ namespace Dab.Runtime.Minigames
                 "Creature",
                 Vector3.zero,
                 Vector3.one);
+
+            SignatureMarkAdornUI.Build(
+                rig.Creature.GetComponent<SignatureMarkPlacementController>());
 
             var motor = rig.Creature.AddComponent<PlaygroundPetMotor>();
             motor.SetGround(ground);

@@ -1,4 +1,5 @@
 using System.Text;
+using Dab.Runtime.Abilities;
 using UnityEngine;
 
 namespace Dab.Runtime.Creature
@@ -48,7 +49,6 @@ namespace Dab.Runtime.Creature
         private float _elapsed;
         private bool _popFired;
         private bool _flourishComplete;
-        private int _abilityHash;
         private CreatureStateMachine _machine;
 
         public override CreatureStateId Id => CreatureStateId.AbilityUnlock;
@@ -61,11 +61,10 @@ namespace Dab.Runtime.Creature
         }
 
         /// <summary>
-        /// The ability being performed. A real implementation reads the bound
-        /// ability from the creature's mark data; left as a plain field so the
-        /// flourish can be triggered in a prototype without that system existing.
+        /// The ability being performed. Gameplay identity is separate from
+        /// Animator state identity; the MVP shares the Proud_Flourish animation.
         /// </summary>
-        public int AbilityId { get; set; }
+        public CreatureAbilityId AbilityId { get; internal set; }
 
         public override void OnEnter()
         {
@@ -75,12 +74,6 @@ namespace Dab.Runtime.Creature
 
             OnAnimatorTrigger("Proud_Flourish");
 
-            // Hashed once, on entry, so the per-frame path never converts a
-            // string. 0 is a legitimate Animator state hash for a default
-            // sub-state machine, and 1 keeps it clearly a placeholder if the
-            // real mark data has not been wired up yet.
-            _abilityHash = AbilityId > 0 ? AbilityId : 1;
-            OnAnimatorCrossFade(_abilityHash, LightPopSeconds);
         }
 
         public override void OnUpdate(float deltaTime)
