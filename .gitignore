@@ -42,8 +42,11 @@ crashlytics-build.properties
 
 # Test runner output. -runTests without an explicit -testResults drops an
 # XML report in the project root, which then shows up as an untracked file for
-# anyone who runs the suite locally.
+# anyone who runs the suite locally. PlayMode runs also drop a throwaway init
+# scene under Assets/.
 TestResults*.xml
+Assets/InitTestScene*.unity
+Assets/InitTestScene*.unity.meta
 
 # Python (Tools/ verification gate)
 __pycache__/
