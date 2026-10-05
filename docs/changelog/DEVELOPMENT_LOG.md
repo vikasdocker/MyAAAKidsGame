@@ -55,3 +55,79 @@ Chunking was changed from `\n` to `\n\n` after the first sync: newline splitting
 **Left undone:** the pre-existing stale dataset `43a50efc…` (AGENTS.md + README.md, no vectors) was left untouched.
 
 ---
+
+## 2026-10-05 — Playable loop validation and MVP paint persistence
+
+**Phase 1 validation:** the complete working-tree PlayMode suite passed (45/45).
+Made the ground-tap movement test wait on a bounded real-time deadline so batch
+mode has enough simulated time to turn and move the pet; its isolated regression
+and the full suite both passed.
+
+**Phase 2 design:** resolved the MVP save scope as local persistence for the
+current creature, with future-variant remapping deferred. Added the Save System
+GDD and ADR-0003 before implementation.
+
+**Implemented:** completed UV/color paint strokes are journaled as versioned
+JSON-lines under `Application.persistentDataPath`. Append I/O runs on a worker;
+strokes replay through the existing compositor before the first input frame.
+Incomplete final records are recovered without discarding earlier strokes;
+unsupported schemas and storage failures are reported rather than silently
+overwritten. Pending writes flush on pause, quit, and rig destruction. Unity
+Editor batch-mode tests skip the app's persistent directory to avoid modifying
+developer save data.
+
+**Tests added:** empty journal, ordered stroke/color round-trip, truncated-tail
+recovery, unsupported-schema preservation, and paint replay without a duplicate
+save event.
+
+**Validation:** complete PlayMode suite passed (50/50) on 2026-10-05.
+
+---
+
+## 2026-10-05 — Phase 3 Echo runtime foundation
+
+**Design resolved:** each mark maps to one fixed ability, with no emergent
+combinations. The MVP uses the game concept's Horn Swirl → Playful Charge
+example. Authored the Echo System GDD and ADR-0004 before implementation;
+updated the game concept and project rules to record the decision.
+
+**Implemented:** added stable mark and ability IDs, a deterministic catalog,
+explicit and idempotent mark binding, a versioned local mark-ID save document,
+and runtime restoration before first input. The playground now performs its
+first bound ability through the typed `AbilityUnlockState` only; unmarked
+creatures do not receive a default ability. Ability identity is no longer used
+as an Animator state hash. The Adorn UI and visible placement are deliberately
+deferred and the Echo system is not yet player-ready.
+
+**Tests added:** fixed mapping, unknown-mark rejection, duplicate binding,
+read-only authored state, save round-trip/replacement, unsupported schema and
+incomplete-save preservation, plus playground performance using an explicitly
+bound mark.
+
+**Validation:** full Unity PlayMode suite passed (55/55) on 2026-10-05;
+workspace C# diagnostics report no errors; `git diff --check` passed.
+
+---
+
+## 2026-10-05 — Phase 3 Echo player-facing placement
+
+Authored ADR-0005 before implementing the first child-facing Adorn slice.
+Gameplay scenes now build an icon-first, cancellable placement control; tapping
+or beginning a drag on the creature paints a Cocoa Ink Horn Swirl through the
+existing paint compositor and binds its fixed Playful Charge ability. The mark
+shape is stored in the existing paint journal and the mark ID in its existing
+local save. Freehand touch painting is gated while placement mode owns input,
+and touch starts outside the creature no longer create phantom paint strokes.
+The generated canvas now uses the palette's Dawn Cream base so authored marks
+are visible against the neutral creature.
+
+**Validation:** full Unity PlayMode suite passed (59/59) on 2026-10-05;
+targeted C# diagnostics report no errors; `git diff --check` passed.
+
+## 2026-10-05 — Non-negotiable constraint regression guards
+
+Added automated checks for fail/loss creature states, forbidden progression,
+monetization, and social runtime type declarations, random calls in gameplay
+decision code, and third-party ad/analytics SDK package identifiers. Updated
+the test guide and roadmap to mark this as partial coverage: source-level timer
+and broader package-ID guards remain future work.

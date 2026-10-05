@@ -19,11 +19,18 @@ Paint a fluffy hatchling; every mark you make becomes an ability it performs bac
 
 Design intent (from the GDD's MDA / SDT sections): the child is motivated by **autonomy** (their marks are chosen), **competence** (the creature visibly responds), and **relatedness** (the pet reacts to them personally). Anything that introduces a score, a timer, or a failure readout breaks all three.
 
-## The Echo mechanic (central hook — NOT IMPLEMENTED)
+## The Echo mechanic (central hook — MVP interaction implemented)
 
-A "signature mark" painted by the child is bound to an ability the creature can perform. This is the whole reason the game exists.
+A signature mark authored by the child is bound to the one fixed ability the
+creature performs. The approved MVP pairing is **Horn Swirl → Playful Charge**;
+emergent combinations are out of scope.
 
-**Implementation status:** no data model exists. `Assets/Scripts/Runtime/Abilities/` is empty. `AbilityUnlockState.AbilityId` is a bare `int` with the code comment *"left as a plain field so the flourish can be triggered in a prototype without that system existing."* There is no `SignatureMark` type and no mark→ability binding table anywhere in the repo.
+**Implementation status:** typed mark/ability IDs, a fixed catalog, explicit
+binding, typed ability performance, and local mark-ID persistence are
+implemented. The initial Adorn UI and visible surface placement are documented
+in `design/Systems/echo-system.md`, ADR-0004, and ADR-0005. Further mark content,
+device validation, and richer feedback remain; new creatures do not receive a
+default mark.
 
 ## Visual identity — "Candy Sunrise" (AGENTS.md §7)
 
@@ -45,7 +52,8 @@ The full art bible (`design/Art/art-bible.md`, 6,036 lines) has since been writt
 
 1. How is skill improvement made visible without a score or fail state?
 2. Do authored paint patterns survive permanently, and what happens when creature variants are added?
-3. Is signature-mark binding strictly 1:1, or do combinations grant emergent abilities? (Affects architecture and content cost.)
+3. **Resolved for MVP:** each signature mark maps to one fixed ability; no
+   emergent combinations. MVP pairing: Horn Swirl → Playful Charge.
 4. What form does reading assistance take (voice-over, TTS, icon-only)?
 5. What does the parent gate contain?
 6. Visual reference games were never supplied (blocking quality review of the art bible).
@@ -61,4 +69,5 @@ The full art bible (`design/Art/art-bible.md`, 6,036 lines) has since been writt
 | `design/Art/style-anchor-prompt.md` | 9.5 KB | AI image-gen style anchor + negative prompt |
 | `design/Art/palette.json` / `.css` | 35 / 13 KB | Machine-readable palette incl. colourblind safety and build-time checks — **gated by CI** |
 | `design/Art/typography.json` | 24 KB | Typography spec — **gated by CI** |
-| `design/Systems/` | — | **Empty.** No per-system GDDs have been written |
+| `design/Systems/save-system.md` | — | MVP local paint and mark-ID persistence scope |
+| `design/Systems/echo-system.md` | ADR-0004, ADR-0005 | Fixed mark-to-ability binding and MVP Adorn placement; additional marks and device validation remain |

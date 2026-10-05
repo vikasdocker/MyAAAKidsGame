@@ -1,7 +1,7 @@
 # ADR Index
 
 **Doc type:** project knowledge (indexed into Dify)
-**Last verified:** 2026-10-03
+**Last verified:** 2026-10-05
 **Rule (AGENTS.md §8):** any decision affecting the runtime asmdef, asset budget, rendering approach, or persistence model requires an ADR, written **before** implementation.
 
 ## Decision records
@@ -9,8 +9,14 @@
 | ID | Title | Status in file | Actual implementation state | Date |
 |---|---|---|---|---|
 | [ADR-0001](adr-0001-touch-input-abstraction.md) | Touch input abstraction | **Proposed** | **Implemented** — `FluidTouchInputManager` uses EnhancedTouch, DPI-normalized thresholds, `Tapped` as a first-class event, zero legacy `UnityEngine.Input.*` | 2026-09-30 |
+| [ADR-0003](adr-0003-local-paint-persistence.md) | Local paint persistence as a versioned stroke journal | **Accepted** | **Implemented** — local append-only paint journal, replay, recovery, lifecycle flush, and tests | 2026-10-05 |
+| [ADR-0004](adr-0004-echo-signature-mark-binding.md) | Fixed signature-mark-to-ability binding | **Accepted** | **Implemented (runtime foundation)** — typed catalog, explicit binding, local mark persistence, and typed ability performance | 2026-10-05 |
+| [ADR-0005](adr-0005-signature-mark-placement.md) | Deliberate signature-mark placement | **Accepted** | **Implemented (MVP interaction)** — icon-first Adorn mode paints a permanent Horn Swirl stroke and binds its fixed ability | 2026-10-05 |
 
 **KNOWN DOC DRIFT:** ADR-0001's `Status: **Proposed**` is stale — the decision is fully implemented and in use. It should read *Accepted*. Its 8 validation criteria (sub-frame tap, DPI independence at 160/320/640, zero-GC stroke, `Screen.dpi == 0` degradation, background-no-phantom, multi-touch safety, plus "no legacy Input usage") have **no tests**; criteria 1–6 are all testable and none are covered.
+
+**Numbering note:** ADR-0002 remains reserved for the production painting render
+pass described in `CreaturePaintController`; it has not yet been authored.
 
 ## Registry
 

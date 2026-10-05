@@ -503,10 +503,15 @@ To resolve in downstream skills:
 
 1. **Competence without scores** — how is improvement visible in a no-fail,
    no-score game? (`/design-system` — Minigame System)
-2. **Persistence of paint** — does a child's painted pattern survive indefinitely,
-   and what happens when new body parts or creature variants are added?
-3. **Signature-mark binding model** — is it strictly 1 mark = 1 ability, or can
-   combinations grant emergent abilities? (Affects architecture and content cost)
+2. **Persistence of paint** — resolved for MVP: completed paint on the single
+   creature is saved locally and restored indefinitely; mapping it onto future
+   body parts or creature variants is deferred. See
+   `design/Systems/save-system.md`.
+3. **Signature-mark binding model** — resolved for the MVP: each signature mark
+   maps to exactly one fixed ability; combinations do not grant emergent
+   abilities. The MVP pairing is Horn Swirl → Playful Charge. See
+   `design/Systems/echo-system.md` and
+   `docs/architecture/adr-0004-echo-signature-mark-binding.md`.
 4. **Reading assistance specifics** — voice-over for text? Text-to-speech? Icon-only?
    (Affects UX and localization scope)
 5. **Parent gate design** — what does the parent-facing layer actually contain?

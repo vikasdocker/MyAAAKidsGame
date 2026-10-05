@@ -277,8 +277,9 @@ before play mode starts and reports success regardless. PlayMode test runs and
 1. How is skill improvement made **visible without a score or fail state**?
 2. Do authored paint patterns survive permanently, and what happens when creature
    variants are added?
-3. Is signature-mark binding strictly 1:1, or do combinations grant emergent
-   abilities? — **Affects architecture and content cost.**
+3. **Resolved for the MVP:** each signature mark maps to one fixed ability;
+   combinations do not grant emergent abilities. MVP pairing: Horn Swirl →
+   Playful Charge. See `design/Systems/echo-system.md`.
 4. What form does reading assistance take (voice-over, TTS, icon-only)?
 5. What does the parent gate contain?
 6. Visual reference games — not supplied. **Blocking art bible quality.**
